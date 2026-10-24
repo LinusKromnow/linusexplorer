@@ -177,6 +177,32 @@
     </plurals>
     <string name="msg_decrypted">Decrypted to “%1$s”</string>
 
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="settings_dynamic_color">Dynamic colors</string>
+    <string name="settings_dynamic_color_summary">Use colors from your wallpaper</string>
+    <string name="settings_grid_view">Grid view</string>
+    <string name="settings_thumbnails">Thumbnails</string>
+    <string name="settings_thumbnails_summary">Previews for images, videos and apps. Vault previews are kept in memory only.</string>
+    <string name="settings_files">Files</string>
+    <string name="settings_recycle_bin">Recycle bin</string>
+    <string name="settings_recycle_bin_summary">Deleted files on this device can be restored for 30 days</string>
+    <string name="settings_security">Security</string>
+    <string name="settings_on">On</string>
+    <string name="settings_off">Off</string>
+    <string name="settings_about">About</string>
+    <string name="settings_version">Version %1$s</string>
+    <string name="settings_source_code">Source code</string>
+    <string name="settings_license">License</string>
+    <string name="settings_license_summary">GNU General Public License v3.0 or later</string>
+    <string name="settings_privacy">Privacy</string>
+    <string name="settings_privacy_summary">No ads, no tracking, no analytics. LinusExplorer only connects to servers you add yourself.</string>
+
     <!-- App lock -->
     <string name="app_lock_title">App lock</string>
     <string name="app_lock_body">Choose a PIN of at least 4 digits. LinusExplorer asks for it when it starts and after 30 seconds in the background.</string>

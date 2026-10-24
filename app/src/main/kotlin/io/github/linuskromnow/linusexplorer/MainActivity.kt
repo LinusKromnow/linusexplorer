@@ -1,13 +1,18 @@
 package io.github.linuskromnow.linusexplorer
 
+import android.graphics.Color
 import android.os.Bundle
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.listSaver
@@ -20,6 +25,8 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.linuskromnow.linusexplorer.data.AppearancePrefs
+import io.github.linuskromnow.linusexplorer.data.ThemeMode
 import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.security.Biometrics
 import io.github.linuskromnow.linusexplorer.security.SecureWindow
@@ -28,6 +35,7 @@ import io.github.linuskromnow.linusexplorer.ui.browser.BrowserScreen
 import io.github.linuskromnow.linusexplorer.ui.editor.EditorScreen
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
 import io.github.linuskromnow.linusexplorer.ui.lock.LockScreen
+import io.github.linuskromnow.linusexplorer.ui.settings.SettingsScreen
 import io.github.linuskromnow.linusexplorer.ui.theme.LinusExplorerTheme
 
 // FragmentActivity (a ComponentActivity) because BiometricPrompt needs one.
@@ -35,8 +43,21 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        val preferences = (application as LinusExplorerApp).container.preferences
         setContent {
-            LinusExplorerTheme {
+            val appearance by preferences.appearance.collectAsStateWithLifecycle(AppearancePrefs())
+            val dark = when (appearance.theme) {
+                ThemeMode.SYSTEM -> isSystemInDarkTheme()
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            DisposableEffect(dark) {
+                // Status/navigation bar icons follow the app theme, not only the system one.
+                val style = if (dark) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+                enableEdgeToEdge(style, style)
+                onDispose { }
+            }
+            LinusExplorerTheme(darkTheme = dark, dynamicColor = appearance.dynamicColor) {
                 AppRoot()
             }
         }
@@ -46,6 +67,7 @@ class MainActivity : FragmentActivity() {
 @Composable
 private fun AppRoot(lockViewModel: AppLockViewModel = viewModel()) {
     val lock by lockViewModel.state.collectAsStateWithLifecycle()
+    var showSettings by rememberSaveable { mutableStateOf(false) }
     LifecycleStartEffect(Unit) {
         lockViewModel.onAppForeground()
         onStopOrDispose { lockViewModel.onAppBackground() }
@@ -69,11 +91,20 @@ private fun AppRoot(lockViewModel: AppLockViewModel = viewModel()) {
                 onBiometric = biometric,
             )
         }
+        showSettings -> {
+            BackHandler { showSettings = false }
+            SecureWindow(lock.enabled)
+            SettingsScreen(onBack = { showSettings = false }, lockViewModel = lockViewModel)
+        }
         else -> {
             // The editor is drawn over the browser instead of replacing it, so browser state and
             // the vault's background auto-lock keep working while a file is open.
             var editing by rememberSaveable(stateSaver = LocationSaver) { mutableStateOf<Location?>(null) }
-            BrowserScreen(onEditFile = { editing = it }, lockViewModel = lockViewModel)
+            BrowserScreen(
+                onEditFile = { editing = it },
+                onOpenSettings = { showSettings = true },
+                lockViewModel = lockViewModel,
+            )
             editing?.let { EditorScreen(location = it, onClose = { editing = null }) }
         }
     }

@@ -91,7 +91,6 @@ import io.github.linuskromnow.linusexplorer.security.SecureWindow
 import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
 import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
 import io.github.linuskromnow.linusexplorer.storage.StorageAccess
-import io.github.linuskromnow.linusexplorer.ui.lock.AppLockSettingsDialog
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
 import io.github.linuskromnow.linusexplorer.util.FileOpener
 import kotlinx.coroutines.launch
@@ -100,12 +99,12 @@ import kotlinx.coroutines.launch
 @Composable
 fun BrowserScreen(
     onEditFile: (Location) -> Unit,
+    onOpenSettings: () -> Unit,
     viewModel: BrowserViewModel = viewModel(),
     lockViewModel: AppLockViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lockState by lockViewModel.state.collectAsStateWithLifecycle()
-    var showAppLockSettings by rememberSaveable { mutableStateOf(false) }
     SecureWindow(lockState.enabled || state.inVault)
     val vaultPrompt = VaultBiometrics.Prompt(stringResource(R.string.vault_biometric_enable_title), stringResource(R.string.action_cancel))
     val context = LocalContext.current
@@ -179,8 +178,8 @@ fun BrowserScreen(
                     viewModel.openVault()
                     scope.launch { drawerState.close() }
                 },
-                onAppLockClick = {
-                    showAppLockSettings = true
+                onSettingsClick = {
+                    onOpenSettings()
                     scope.launch { drawerState.close() }
                 },
             )
@@ -264,17 +263,6 @@ fun BrowserScreen(
     }
 
     state.dialog?.let { BrowserDialogHost(it, viewModel) }
-    if (showAppLockSettings) {
-        val close = { showAppLockSettings = false }
-        AppLockSettingsDialog(
-            state = lockState,
-            biometricAvailable = remember { Biometrics.isAvailable(context) },
-            onEnable = { pin, biometric -> lockViewModel.enable(pin, biometric).also { close() } },
-            onSetBiometric = lockViewModel::setBiometric,
-            onDisable = { lockViewModel.disable().also { close() } },
-            onDismiss = close,
-        )
-    }
     state.transfer?.let { transfer ->
         val conflict = transfer.conflict
         when {

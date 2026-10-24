@@ -18,6 +18,10 @@ import kotlinx.coroutines.flow.map
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
+enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+data class AppearancePrefs(val theme: ThemeMode = ThemeMode.SYSTEM, val dynamicColor: Boolean = true)
+
 data class AppLockPrefs(
     /** [io.github.linuskromnow.linusexplorer.security.PinHasher] hash; null when app lock is off. */
     val pinHash: String? = null,
@@ -36,6 +40,16 @@ class UserPreferences(context: Context) {
 
     val appLock: Flow<AppLockPrefs> = store.data.map { it.toAppLockPrefs() }
 
+    val appearance: Flow<AppearancePrefs> = store.data.map { it.toAppearancePrefs() }
+
+    suspend fun updateAppearance(transform: (AppearancePrefs) -> AppearancePrefs) {
+        store.edit { prefs ->
+            val updated = transform(prefs.toAppearancePrefs())
+            prefs[THEME] = updated.theme.name
+            prefs[DYNAMIC_COLOR] = updated.dynamicColor
+        }
+    }
+
     val editor: Flow<EditorPrefs> = store.data.map { it.toEditorPrefs() }
 
     suspend fun updateBrowser(transform: (BrowserPrefs) -> BrowserPrefs) {
@@ -47,6 +61,7 @@ class UserPreferences(context: Context) {
             prefs[SHOW_HIDDEN] = updated.showHidden
             prefs[SHOW_THUMBNAILS] = updated.showThumbnails
             prefs[VIEW_MODE] = updated.viewMode.name
+            prefs[RECYCLE_BIN] = updated.recycleBin
         }
     }
 
@@ -77,6 +92,7 @@ class UserPreferences(context: Context) {
             showHidden = this[SHOW_HIDDEN] ?: defaults.showHidden,
             showThumbnails = this[SHOW_THUMBNAILS] ?: defaults.showThumbnails,
             viewMode = this[VIEW_MODE]?.let { name -> ViewMode.entries.find { it.name == name } } ?: defaults.viewMode,
+            recycleBin = this[RECYCLE_BIN] ?: defaults.recycleBin,
         )
     }
 
@@ -88,6 +104,11 @@ class UserPreferences(context: Context) {
                 .coerceIn(EditorPrefs.MIN_FONT_SIZE, EditorPrefs.MAX_FONT_SIZE),
         )
     }
+
+    private fun Preferences.toAppearancePrefs() = AppearancePrefs(
+        theme = this[THEME]?.let { name -> ThemeMode.entries.find { it.name == name } } ?: ThemeMode.SYSTEM,
+        dynamicColor = this[DYNAMIC_COLOR] ?: true,
+    )
 
     private fun Preferences.toAppLockPrefs() = AppLockPrefs(
         pinHash = this[PIN_HASH],
@@ -103,6 +124,9 @@ class UserPreferences(context: Context) {
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
         val SHOW_THUMBNAILS = booleanPreferencesKey("show_thumbnails")
         val VIEW_MODE = stringPreferencesKey("view_mode")
+        val RECYCLE_BIN = booleanPreferencesKey("recycle_bin")
+        val THEME = stringPreferencesKey("theme")
+        val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val EDITOR_WRAP = booleanPreferencesKey("editor_word_wrap")
         val EDITOR_FONT_SIZE = intPreferencesKey("editor_font_size")
         val PIN_HASH = stringPreferencesKey("app_lock_pin_hash")

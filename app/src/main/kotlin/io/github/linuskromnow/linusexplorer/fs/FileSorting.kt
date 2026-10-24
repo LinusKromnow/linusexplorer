@@ -11,6 +11,8 @@ data class BrowserPrefs(
     val showHidden: Boolean = false,
     val showThumbnails: Boolean = true,
     val viewMode: ViewMode = ViewMode.LIST,
+    /** Deleting local files moves them to the recycle bin first. */
+    val recycleBin: Boolean = true,
 )
 
 object FileSorting {
