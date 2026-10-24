@@ -83,6 +83,16 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
                 },
             )
         }
+        is BrowserDialog.Compress -> CompressDialog(
+            dialog = dialog,
+            onConfirm = { name, format, password -> viewModel.compress(dialog.entries, name, format, password) },
+            onDismiss = viewModel::dismissDialog,
+        )
+        is BrowserDialog.Password -> PasswordDialog(
+            dialog = dialog,
+            onSubmit = { viewModel.submitPassword(dialog, it) },
+            onDismiss = viewModel::dismissDialog,
+        )
     }
 }
 
@@ -136,7 +146,16 @@ fun TransferDialog(transfer: TransferState, onCancel: () -> Unit) {
     val progress = transfer.progress
     AlertDialog(
         onDismissRequest = {}, // a running transfer is only stopped through Cancel
-        title = { Text(stringResource(if (transfer.isMove) R.string.transfer_moving else R.string.transfer_copying)) },
+        title = {
+            val title = when (transfer.kind) {
+                TransferKind.COPY -> R.string.transfer_copying
+                TransferKind.MOVE -> R.string.transfer_moving
+                TransferKind.COMPRESS -> R.string.transfer_compressing
+                TransferKind.EXTRACT -> R.string.transfer_extracting
+                TransferKind.OPEN -> R.string.transfer_opening
+            }
+            Text(stringResource(title))
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (progress == null) {

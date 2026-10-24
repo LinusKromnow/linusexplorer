@@ -15,6 +15,9 @@ interface VirtualFileSystem {
     val displayName: String
     val rootPath: String
 
+    /** Read-only file systems (e.g. opened archives) reject every write operation. */
+    val isReadOnly: Boolean get() = false
+
     suspend fun list(path: String): List<FileEntry>
     suspend fun stat(path: String): FileEntry
     suspend fun exists(path: String): Boolean
@@ -53,3 +56,20 @@ class AlreadyExistsFsException(path: String, cause: Throwable? = null) :
 
 class AccessDeniedFsException(path: String, cause: Throwable? = null) :
     FsException("Permission denied: ${VfsPaths.name(path)}", cause)
+
+class ReadOnlyFsException : FsException("This location is read-only")
+
+/**
+ * The file system [fsId] needs a (different) password; see [PasswordProtected].
+ * [wrongPassword] is true when a password was supplied but rejected.
+ */
+class PasswordRequiredFsException(
+    val fsId: String?,
+    val wrongPassword: Boolean,
+    cause: Throwable? = null,
+) : FsException(if (wrongPassword) "Wrong password" else "Password required", cause)
+
+/** A file system whose contents can only be read after [setPassword]. */
+interface PasswordProtected {
+    fun setPassword(password: CharArray)
+}

@@ -60,7 +60,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
+import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.fs.SortField
+import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
+import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.storage.StorageAccess
 import io.github.linuskromnow.linusexplorer.util.FileOpener
 import kotlinx.coroutines.launch
@@ -121,9 +124,9 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
         drawerContent = {
             PlacesDrawer(
                 places = state.places,
-                currentPath = state.location.path,
+                currentPath = state.location.takeIf { it.fsId == LocalFileSystem.ID }?.path,
                 onPlaceClick = { place ->
-                    viewModel.navigateTo(place.path)
+                    viewModel.navigateTo(Location(LocalFileSystem.ID, place.path))
                     scope.launch { drawerState.close() }
                 },
             )
@@ -137,13 +140,14 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
                     BrowserTopBar(
                         title = state.breadcrumbs.lastOrNull()?.label.orEmpty(),
                         prefs = state.prefs,
+                        readOnly = state.readOnly,
                         onMenuClick = { scope.launch { drawerState.open() } },
                         viewModel = viewModel,
                     )
                 }
             },
             floatingActionButton = {
-                if (hasAccess && !state.inSelectionMode) BrowserFab(state, viewModel)
+                if (hasAccess && !state.inSelectionMode && !state.readOnly) BrowserFab(state, viewModel)
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
         ) { padding ->
@@ -188,6 +192,7 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
 private fun BrowserTopBar(
     title: String,
     prefs: BrowserPrefs,
+    readOnly: Boolean,
     onMenuClick: () -> Unit,
     viewModel: BrowserViewModel,
 ) {
@@ -226,20 +231,22 @@ private fun BrowserTopBar(
                 CheckableMenuItem(stringResource(R.string.action_show_hidden), prefs.showHidden) {
                     viewModel.updatePrefs { it.copy(showHidden = !it.showHidden) }
                 }
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_new_folder)) },
-                    onClick = {
-                        overflowOpen = false
-                        viewModel.showDialog(BrowserDialog.NewFolder)
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_new_file)) },
-                    onClick = {
-                        overflowOpen = false
-                        viewModel.showDialog(BrowserDialog.NewFile)
-                    },
-                )
+                if (!readOnly) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_new_folder)) },
+                        onClick = {
+                            overflowOpen = false
+                            viewModel.showDialog(BrowserDialog.NewFolder)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_new_file)) },
+                        onClick = {
+                            overflowOpen = false
+                            viewModel.showDialog(BrowserDialog.NewFile)
+                        },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_refresh)) },
                     onClick = {
@@ -268,32 +275,45 @@ private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel) 
             IconButton(onClick = { viewModel.copySelection(cut = false) }) {
                 Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.action_copy))
             }
-            IconButton(onClick = { viewModel.copySelection(cut = true) }) {
-                Icon(Icons.Default.ContentCut, contentDescription = stringResource(R.string.action_cut))
-            }
-            IconButton(onClick = viewModel::requestDelete) {
-                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+            if (!state.readOnly) {
+                IconButton(onClick = { viewModel.copySelection(cut = true) }) {
+                    Icon(Icons.Default.ContentCut, contentDescription = stringResource(R.string.action_cut))
+                }
+                IconButton(onClick = viewModel::requestDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
+                }
             }
             IconButton(onClick = { overflowOpen = true }) {
                 Icon(Icons.Default.MoreVert, contentDescription = stringResource(R.string.action_more))
             }
             DropdownMenu(expanded = overflowOpen, onDismissRequest = { overflowOpen = false }) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_rename)) },
-                    enabled = selected.size == 1,
-                    onClick = {
-                        overflowOpen = false
-                        viewModel.requestRename()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.action_share)) },
-                    enabled = selected.isNotEmpty() && selected.none { it.isDirectory },
-                    onClick = {
-                        overflowOpen = false
-                        viewModel.shareSelection()
-                    },
-                )
+                val single = selected.singleOrNull()
+                val isLocal = state.location.fsId == LocalFileSystem.ID
+                val menuItems = buildList {
+                    if (!state.readOnly) {
+                        add(MenuAction(R.string.action_rename, enabled = single != null, viewModel::requestRename))
+                        add(MenuAction(R.string.action_compress, action = viewModel::requestCompress))
+                    }
+                    if (isLocal && single != null && ArchiveFormat.detect(single.name) != null) {
+                        add(MenuAction(R.string.action_extract, action = viewModel::extractSelection))
+                    }
+                    if (single != null && !single.isDirectory) {
+                        add(MenuAction(R.string.action_open_with, action = viewModel::openSelectionExternally))
+                    }
+                    if (isLocal) {
+                        add(MenuAction(R.string.action_share, enabled = selected.none { it.isDirectory }, viewModel::shareSelection))
+                    }
+                }
+                menuItems.forEach { (label, enabled, action) ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(label)) },
+                        enabled = enabled,
+                        onClick = {
+                            overflowOpen = false
+                            action()
+                        },
+                    )
+                }
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_select_all)) },
                     onClick = {
@@ -308,6 +328,8 @@ private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel) 
         ),
     )
 }
+
+private data class MenuAction(val label: Int, val enabled: Boolean = true, val action: () -> Unit)
 
 @Composable
 private fun BrowserFab(state: BrowserUiState, viewModel: BrowserViewModel) {

@@ -14,6 +14,8 @@ class FileSystemRegistry {
         systems.remove(id)
     }
 
+    fun find(id: String): VirtualFileSystem? = systems[id]
+
     operator fun get(id: String): VirtualFileSystem =
         systems[id] ?: throw FsException("Storage “$id” is not connected")
 }

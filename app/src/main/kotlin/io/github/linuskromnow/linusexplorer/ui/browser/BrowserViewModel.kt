@@ -8,13 +8,21 @@ import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.FileSorting
+import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.Location
+import io.github.linuskromnow.linusexplorer.fs.PasswordProtected
+import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
+import io.github.linuskromnow.linusexplorer.fs.TransferProgress
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
+import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFileSystem
+import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
+import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveWriter
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.storage.Place
 import io.github.linuskromnow.linusexplorer.storage.Places
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -24,6 +32,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.UUID
 
 class BrowserViewModel(application: Application) : AndroidViewModel(application) {
     private val container = (application as LinusExplorerApp).container
@@ -45,6 +56,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private var loadJob: Job? = null
     private var transferJob: Job? = null
 
+    /** What to retry once the user has typed the password asked for by a [BrowserDialog.Password]. */
+    private var afterPassword: (() -> Unit)? = null
+
     init {
         refreshPlaces()
         viewModelScope.launch {
@@ -57,9 +71,11 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     // region Navigation
 
-    fun navigateTo(path: String) {
+    fun navigateTo(path: String) = navigateTo(_state.value.location.copy(path = path))
+
+    fun navigateTo(location: Location) {
         val current = _state.value.location
-        val target = current.copy(path = VfsPaths.normalize(path))
+        val target = location.copy(path = VfsPaths.normalize(location.path))
         if (target == current) return refresh()
         history.addLast(current)
         if (history.size > MAX_HISTORY) history.removeFirst()
@@ -77,7 +93,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun refreshPlaces() {
         val places = Places.all(getApplication())
-        _state.update { it.copy(places = places, breadcrumbs = breadcrumbsFor(it.location.path, places)) }
+        _state.update { it.copy(places = places, breadcrumbs = breadcrumbsFor(it.location, places)) }
     }
 
     fun scrollPosition(location: Location): Pair<Int, Int> = scrollPositions[location] ?: (0 to 0)
@@ -91,11 +107,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         _state.update {
             it.copy(
                 location = location,
+                readOnly = fileSystems.find(location.fsId)?.isReadOnly == true,
                 entries = emptyList(),
                 selection = emptySet(),
                 error = null,
                 canGoBack = history.isNotEmpty(),
-                breadcrumbs = breadcrumbsFor(location.path, it.places),
+                breadcrumbs = breadcrumbsFor(location, it.places),
             )
         }
         load()
@@ -122,18 +139,23 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: Exception) {
                 unsortedEntries = emptyList()
                 _state.update { it.copy(entries = emptyList(), isLoading = false, error = e.message ?: e.toString()) }
+                if (e is PasswordRequiredFsException) askForPassword(e, retry = ::load)
             }
         }
     }
 
-    private fun breadcrumbsFor(path: String, places: List<Place>): List<Breadcrumb> {
-        val volume = places
-            .filter { it.isVolume && VfsPaths.isAncestorOrSelf(it.path, path) }
-            .maxByOrNull { it.path.length }
-        val base = volume?.let { Breadcrumb(it.label, it.path) }
-            ?: Breadcrumb(getApplication<Application>().getString(R.string.place_root), VfsPaths.ROOT)
+    private fun breadcrumbsFor(location: Location, places: List<Place>): List<Breadcrumb> {
+        val base = if (location.fsId != LocalFileSystem.ID) {
+            Breadcrumb(fileSystems.find(location.fsId)?.displayName ?: location.fsId, VfsPaths.ROOT)
+        } else {
+            places
+                .filter { it.isVolume && VfsPaths.isAncestorOrSelf(it.path, location.path) }
+                .maxByOrNull { it.path.length }
+                ?.let { Breadcrumb(it.label, it.path) }
+                ?: Breadcrumb(getApplication<Application>().getString(R.string.place_root), VfsPaths.ROOT)
+        }
         var current = base.path
-        return listOf(base) + VfsPaths.relativeSegments(base.path, path).map { segment ->
+        return listOf(base) + VfsPaths.relativeSegments(base.path, location.path).map { segment ->
             current = VfsPaths.child(current, segment)
             Breadcrumb(segment, current)
         }
@@ -144,11 +166,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     // region Selection & clicks
 
     fun onEntryClick(entry: FileEntry) {
+        val location = _state.value.location
         when {
             _state.value.inSelectionMode -> toggleSelection(entry)
             entry.isDirectory -> navigateTo(entry.path)
-            _state.value.location.fsId == LocalFileSystem.ID -> _events.trySend(BrowserEvent.OpenFile(entry.path))
-            else -> _events.trySend(BrowserEvent.Message(R.string.msg_open_remote_unsupported))
+            ArchiveFormat.detect(entry.name) != null -> openArchive(entry)
+            location.fsId == LocalFileSystem.ID -> _events.trySend(BrowserEvent.OpenFile(entry.path))
+            else -> openViaCache(entry)
         }
     }
 
@@ -168,12 +192,124 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         _state.update { it.copy(selection = emptySet()) }
     }
 
+    /** "Open with" for the single selected file, bypassing archive browsing. */
+    fun openSelectionExternally() {
+        val entry = _state.value.selectedEntries.singleOrNull()?.takeIf { !it.isDirectory } ?: return
+        clearSelection()
+        if (_state.value.location.fsId == LocalFileSystem.ID) {
+            _events.trySend(BrowserEvent.OpenFile(entry.path))
+        } else {
+            openViaCache(entry)
+        }
+    }
+
+    // endregion
+
+    // region Archives
+
+    private fun openArchive(entry: FileEntry) {
+        val location = _state.value.location
+        if (location.fsId == LocalFileSystem.ID) {
+            val archive = archiveFor(location.fsId, entry, File(entry.path))
+            navigateTo(Location(archive.id, VfsPaths.ROOT))
+            return
+        }
+        // Archives inside archives (or, later, on remote storage) are unpacked to the cache first.
+        runTransfer(TransferKind.OPEN, retry = { openArchive(entry) }) { onProgress ->
+            val local = copyToCache(location, entry, onProgress)
+            val archive = archiveFor(location.fsId, entry, local)
+            navigateTo(Location(archive.id, VfsPaths.ROOT))
+        }
+    }
+
+    /** Reuses an already registered archive view (keeping its password) unless the file changed. */
+    private fun archiveFor(sourceFsId: String, entry: FileEntry, file: File): ArchiveFileSystem {
+        val id = ArchiveFileSystem.idFor(sourceFsId, entry.path)
+        val existing = fileSystems.find(id) as? ArchiveFileSystem
+        if (existing != null && existing.file == file && existing.isCurrent) return existing
+        return ArchiveFileSystem(id, file, ArchiveFormat.detect(entry.name)!!).also { fileSystems.register(it) }
+    }
+
+    fun extractSelection() {
+        val location = _state.value.location
+        val entry = _state.value.selectedEntries.singleOrNull() ?: return
+        if (ArchiveFormat.detect(entry.name) == null || location.fsId != LocalFileSystem.ID) return
+        clearSelection()
+        runTransfer(TransferKind.EXTRACT, retry = { retryExtract(entry) }) { onProgress ->
+            val archive = archiveFor(location.fsId, entry, File(entry.path))
+            archive.verifyPassword()
+            val fs = fileSystems[location.fsId]
+            val dirName = FileTransfer.uniqueName(fs, location.path, ArchiveFormat.baseName(entry.name), isDirectory = true)
+            val dir = VfsPaths.child(location.path, dirName)
+            fs.createDirectory(dir)
+            val roots = archive.list(VfsPaths.ROOT).map { Location(archive.id, it.path) }
+            fileTransfer.run(roots, Location(location.fsId, dir), move = false, onProgress)
+            _events.trySend(BrowserEvent.Message(R.string.msg_extracted, listOf(dirName)))
+        }
+    }
+
+    private fun retryExtract(entry: FileEntry) {
+        _state.update { it.copy(selection = setOf(entry.path)) }
+        extractSelection()
+    }
+
+    fun requestCompress() {
+        val state = _state.value
+        val entries = state.selectedEntries
+        if (entries.isEmpty() || state.readOnly) return
+        val suggested = entries.singleOrNull()?.let { if (it.isDirectory) it.name else it.name.substringBeforeLast('.') }
+            ?: state.breadcrumbs.lastOrNull()?.label
+            ?: "archive"
+        showDialog(BrowserDialog.Compress(entries, suggested))
+    }
+
+    fun compress(entries: List<FileEntry>, baseName: String, format: ArchiveFormat, password: String?) {
+        val location = _state.value.location
+        _state.update { it.copy(dialog = null, selection = emptySet()) }
+        runTransfer(TransferKind.COMPRESS, retry = { compress(entries, baseName, format, password) }) { onProgress ->
+            val fs = fileSystems[location.fsId]
+            val name = FileTransfer.uniqueName(fs, location.path, baseName + format.extension, isDirectory = false)
+            val target = VfsPaths.child(location.path, name)
+            val sources = entries.map { fs to it }
+            val chars = password?.takeIf { it.isNotEmpty() }?.toCharArray()
+            if (location.fsId == LocalFileSystem.ID) {
+                ArchiveWriter.create(sources, File(target), format, chars, onProgress)
+            } else {
+                val temp = File(cacheDir("compress"), name)
+                try {
+                    ArchiveWriter.create(sources, temp, format, chars, onProgress)
+                    withContext(Dispatchers.IO) {
+                        temp.inputStream().use { input -> fs.openOutput(target).use { input.copyTo(it) } }
+                    }
+                } finally {
+                    temp.delete()
+                }
+            }
+            _events.trySend(BrowserEvent.Message(R.string.msg_compressed, listOf(name)))
+        }
+    }
+
+    fun submitPassword(dialog: BrowserDialog.Password, password: String) {
+        _state.update { it.copy(dialog = null) }
+        (fileSystems.find(dialog.fsId) as? PasswordProtected)?.setPassword(password.toCharArray())
+        afterPassword?.invoke()
+        afterPassword = null
+    }
+
+    private fun askForPassword(e: PasswordRequiredFsException, retry: () -> Unit) {
+        val fsId = e.fsId ?: return sendError(e)
+        afterPassword = retry
+        val name = fileSystems.find(fsId)?.displayName ?: fsId
+        showDialog(BrowserDialog.Password(fsId, name, e.wrongPassword))
+    }
+
     // endregion
 
     // region Clipboard & transfers
 
     fun copySelection(cut: Boolean) {
         val state = _state.value
+        if (cut && state.readOnly) return
         val items = state.selectedEntries.map { Location(state.location.fsId, it.path) }
         if (items.isEmpty()) return
         _state.update { it.copy(clipboard = Clipboard(items, cut), selection = emptySet()) }
@@ -187,26 +323,16 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun paste() {
         val clipboard = _state.value.clipboard ?: return
-        if (transferJob?.isActive == true) return
         val target = _state.value.location
-        transferJob = viewModelScope.launch {
-            _state.update { it.copy(transfer = TransferState(isMove = clipboard.isCut)) }
-            try {
-                val count = fileTransfer.run(clipboard.items, target, clipboard.isCut) { progress ->
-                    _state.update { it.copy(transfer = it.transfer?.copy(progress = progress)) }
-                }
-                if (clipboard.isCut) _state.update { it.copy(clipboard = null) }
-                val message = if (clipboard.isCut) R.plurals.msg_moved else R.plurals.msg_copied
-                _events.trySend(BrowserEvent.Message(message, listOf(count), count))
-            } catch (e: CancellationException) {
-                _events.trySend(BrowserEvent.Message(R.string.msg_transfer_cancelled))
-                throw e
-            } catch (e: Exception) {
-                sendError(e)
-            } finally {
-                _state.update { it.copy(transfer = null) }
-                load()
+        val kind = if (clipboard.isCut) TransferKind.MOVE else TransferKind.COPY
+        runTransfer(kind, retry = ::paste) { onProgress ->
+            for (fsId in clipboard.items.mapTo(HashSet()) { it.fsId }) {
+                (fileSystems.find(fsId) as? ArchiveFileSystem)?.verifyPassword()
             }
+            val count = fileTransfer.run(clipboard.items, target, clipboard.isCut, onProgress)
+            if (clipboard.isCut) _state.update { it.copy(clipboard = null) }
+            val message = if (clipboard.isCut) R.plurals.msg_moved else R.plurals.msg_copied
+            _events.trySend(BrowserEvent.Message(message, listOf(count), count))
         }
     }
 
@@ -216,9 +342,55 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun shareSelection() {
         val files = _state.value.selectedEntries.filter { !it.isDirectory }
-        if (files.isEmpty()) return
+        if (files.isEmpty() || _state.value.location.fsId != LocalFileSystem.ID) return
         clearSelection()
         _events.trySend(BrowserEvent.Share(files.map { it.path }))
+    }
+
+    /** Copies a non-local file into the cache, then hands it to another app. */
+    private fun openViaCache(entry: FileEntry) {
+        val location = _state.value.location
+        runTransfer(TransferKind.OPEN, retry = { openViaCache(entry) }) { onProgress ->
+            val local = copyToCache(location, entry, onProgress)
+            _events.trySend(BrowserEvent.OpenFile(local.path))
+        }
+    }
+
+    private suspend fun copyToCache(location: Location, entry: FileEntry, onProgress: (TransferProgress) -> Unit): File {
+        (fileSystems.find(location.fsId) as? ArchiveFileSystem)?.verifyPassword()
+        val dir = File(cacheDir(OPEN_CACHE), UUID.randomUUID().toString()).apply { mkdirs() }
+        fileTransfer.run(listOf(Location(location.fsId, entry.path)), Location(LocalFileSystem.ID, dir.path), move = false, onProgress)
+        return File(dir, entry.name)
+    }
+
+    private fun cacheDir(name: String) = File(getApplication<Application>().cacheDir, name).apply { mkdirs() }
+
+    /**
+     * Runs a long operation behind the progress dialog. A [PasswordRequiredFsException] opens the
+     * password dialog and runs [retry] once a password has been entered.
+     */
+    private fun runTransfer(
+        kind: TransferKind,
+        retry: () -> Unit,
+        block: suspend (onProgress: (TransferProgress) -> Unit) -> Unit,
+    ) {
+        if (transferJob?.isActive == true) return
+        transferJob = viewModelScope.launch {
+            _state.update { it.copy(transfer = TransferState(kind)) }
+            try {
+                block { progress -> _state.update { it.copy(transfer = it.transfer?.copy(progress = progress)) } }
+            } catch (e: CancellationException) {
+                _events.trySend(BrowserEvent.Message(R.string.msg_transfer_cancelled))
+                throw e
+            } catch (e: PasswordRequiredFsException) {
+                askForPassword(e, retry)
+            } catch (e: Exception) {
+                sendError(e)
+            } finally {
+                _state.update { it.copy(transfer = null) }
+                load()
+            }
+        }
     }
 
     // endregion
@@ -230,16 +402,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun dismissDialog() {
+        afterPassword = null
         _state.update { it.copy(dialog = null) }
     }
 
     fun requestRename() {
+        if (_state.value.readOnly) return
         _state.value.selectedEntries.singleOrNull()?.let { showDialog(BrowserDialog.Rename(it)) }
     }
 
     fun requestDelete() {
         val entries = _state.value.selectedEntries
-        if (entries.isNotEmpty()) showDialog(BrowserDialog.ConfirmDelete(entries))
+        if (entries.isNotEmpty() && !_state.value.readOnly) showDialog(BrowserDialog.ConfirmDelete(entries))
     }
 
     fun createFolder(name: String) = runFsAction { fs, dir -> fs.createDirectory(VfsPaths.child(dir, name)) }
@@ -281,7 +455,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     // endregion
 
-    private companion object {
-        const val MAX_HISTORY = 100
+    companion object {
+        private const val MAX_HISTORY = 100
+
+        /** Cache sub-folder for files handed to other apps; cleared on every app start. */
+        const val OPEN_CACHE = "open"
     }
 }

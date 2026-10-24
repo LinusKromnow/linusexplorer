@@ -25,7 +25,7 @@ import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.storage.Place
 
 @Composable
-fun PlacesDrawer(places: List<Place>, currentPath: String, onPlaceClick: (Place) -> Unit) {
+fun PlacesDrawer(places: List<Place>, currentPath: String?, onPlaceClick: (Place) -> Unit) {
     ModalDrawerSheet {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             Text(
@@ -57,7 +57,7 @@ private fun SectionHeader(text: String) {
 }
 
 @Composable
-private fun PlaceItem(place: Place, currentPath: String, onClick: (Place) -> Unit) {
+private fun PlaceItem(place: Place, currentPath: String?, onClick: (Place) -> Unit) {
     NavigationDrawerItem(
         label = { Text(place.label) },
         icon = { Icon(place.kind.icon(), contentDescription = null) },

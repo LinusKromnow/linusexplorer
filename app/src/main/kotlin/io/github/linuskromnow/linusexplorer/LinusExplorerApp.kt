@@ -6,6 +6,8 @@ import io.github.linuskromnow.linusexplorer.data.UserPreferences
 import io.github.linuskromnow.linusexplorer.fs.FileSystemRegistry
 import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.ui.browser.BrowserViewModel
+import java.io.File
 
 class LinusExplorerApp : Application() {
     lateinit var container: AppContainer
@@ -14,6 +16,8 @@ class LinusExplorerApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // Files decrypted or unpacked for other apps only need to live until the next start.
+        Thread { File(cacheDir, BrowserViewModel.OPEN_CACHE).deleteRecursively() }.start()
     }
 }
 

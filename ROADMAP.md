@@ -16,7 +16,8 @@
 - [ ] Grid view, search (recursive, by name), properties dialog (size of folder, checksums)
 - [ ] Bookmarks and recent folders; tabs or dual-pane on tablets
 - [ ] Settings screen (theme, default folder, confirmations)
-- [ ] Archives: browse/extract zip, tar, 7z (Apache Commons Compress); create zip
+- [x] Archives: browse and extract zip, 7z, tar(.gz/.bz2/.xz), gz/bz2/xz; create zip/7z/tar*; AES-256 zip passwords
+- [ ] RAR: only possible via the non-free UnRAR license (junrar); needs a licensing decision
 - [ ] Recycle bin (optional)
 - [ ] Root access (optional, via libsu)
 

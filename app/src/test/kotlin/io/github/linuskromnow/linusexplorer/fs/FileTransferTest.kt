@@ -43,7 +43,7 @@ class FileTransferTest {
         File(src, "sub/b.txt").writeText("world!")
         val dest = temp.newFolder("dest")
 
-        var last: FileTransfer.Progress? = null
+        var last: TransferProgress? = null
         val count = transfer.run(listOf(loc(src)), loc(dest), move = false) { last = it }
 
         assertEquals(1, count)

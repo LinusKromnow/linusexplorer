@@ -3,12 +3,13 @@ package io.github.linuskromnow.linusexplorer.ui.browser
 import android.content.res.Resources
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
-import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.Location
+import io.github.linuskromnow.linusexplorer.fs.TransferProgress
 import io.github.linuskromnow.linusexplorer.storage.Place
 
 data class BrowserUiState(
     val location: Location,
+    val readOnly: Boolean = false,
     val breadcrumbs: List<Breadcrumb> = emptyList(),
     val entries: List<FileEntry> = emptyList(),
     val isLoading: Boolean = false,
@@ -29,13 +30,17 @@ data class Breadcrumb(val label: String, val path: String)
 
 data class Clipboard(val items: List<Location>, val isCut: Boolean)
 
-data class TransferState(val isMove: Boolean, val progress: FileTransfer.Progress? = null)
+enum class TransferKind { COPY, MOVE, COMPRESS, EXTRACT, OPEN }
+
+data class TransferState(val kind: TransferKind, val progress: TransferProgress? = null)
 
 sealed interface BrowserDialog {
     data object NewFolder : BrowserDialog
     data object NewFile : BrowserDialog
     data class Rename(val entry: FileEntry) : BrowserDialog
     data class ConfirmDelete(val entries: List<FileEntry>) : BrowserDialog
+    data class Compress(val entries: List<FileEntry>, val suggestedName: String) : BrowserDialog
+    data class Password(val fsId: String, val name: String, val wrongPassword: Boolean) : BrowserDialog
 }
 
 sealed interface BrowserEvent {

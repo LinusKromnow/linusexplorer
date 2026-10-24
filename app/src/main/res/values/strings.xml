@@ -62,7 +62,27 @@
     <!-- Transfers -->
     <string name="transfer_copying">Copying</string>
     <string name="transfer_moving">Moving</string>
+    <string name="transfer_compressing">Compressing</string>
+    <string name="transfer_extracting">Extracting</string>
+    <string name="transfer_opening">Opening</string>
     <string name="transfer_preparing">Preparing…</string>
+
+    <!-- Archives -->
+    <string name="action_compress">Compress</string>
+    <string name="action_extract">Extract here</string>
+    <string name="action_open_with">Open with…</string>
+    <string name="field_password">Password</string>
+    <string name="field_password_optional">Password (optional)</string>
+    <string name="compress_password_hint">Encrypted with AES-256; opens in 7-Zip, WinRAR and most other tools.</string>
+    <string name="compress_no_password">%1$s archives can’t be password-protected. Choose ZIP for encryption.</string>
+    <string name="password_title">Password required</string>
+    <string name="password_body">“%1$s” is password-protected.</string>
+    <string name="password_wrong">Wrong password, try again</string>
+    <string name="action_unlock">Unlock</string>
+    <string name="action_show_password">Show password</string>
+    <string name="action_hide_password">Hide password</string>
+    <string name="msg_extracted">Extracted to “%1$s”</string>
+    <string name="msg_compressed">Created “%1$s”</string>
     <plurals name="transfer_files_progress">
         <item quantity="one">%1$d of %2$d file</item>
         <item quantity="other">%1$d of %2$d files</item>
@@ -71,7 +91,6 @@
     <!-- Messages -->
     <string name="msg_error">Error: %1$s</string>
     <string name="msg_no_app_to_open">No installed app can open this file</string>
-    <string name="msg_open_remote_unsupported">Opening remote files is not supported yet</string>
     <string name="msg_transfer_cancelled">Transfer cancelled</string>
     <plurals name="msg_copied_to_clipboard">
         <item quantity="one">%d item ready to paste</item>
