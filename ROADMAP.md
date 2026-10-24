@@ -31,7 +31,7 @@ Each is a `VirtualFileSystem` plus a saved-connection entry (credentials in Andr
 |-----------------|--------------------------------|------------|
 | ✅ SFTP / SSH   | sshj                           | Apache-2.0 |
 | ✅ FTP / FTPS   | Apache Commons Net             | Apache-2.0 |
-| SMB 2/3         | smbj                           | Apache-2.0 |
+| ✅ SMB 2/3       | smbj                           | Apache-2.0 |
 | WebDAV          | OkHttp (hand-written client)   | Apache-2.0 |
 
 Also: open remote files by streaming them to cache, and an "edit and upload back" flow.

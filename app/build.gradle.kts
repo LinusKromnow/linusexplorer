@@ -78,6 +78,7 @@ dependencies {
     implementation(libs.bouncycastle.pkix) // sshj needs it; pinned to match bcprov
     implementation(libs.sshj)
     implementation(libs.commons.net)
+    implementation(libs.smbj)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment) // FragmentActivity for BiometricPrompt; newer than biometric's own
     // Thumbnails. Deliberately no coil-network-*: the app has no network access.

@@ -13,11 +13,15 @@ enum class Protocol(val defaultPort: Int, val label: String) {
 
     /** Explicit TLS (AUTH TLS) on the normal FTP port. */
     FTPS(21, "FTPS"),
+
+    /** Windows shares, Samba, most NAS boxes (SMB 2/3). */
+    SMB(445, "SMB"),
     ;
 
-    /** Whether the server can be used without a user name (FTP's "anonymous"). */
-    val allowsAnonymous: Boolean get() = this == FTP || this == FTPS
+    /** Whether the server can be used without a user name (FTP "anonymous", SMB guest). */
+    val allowsAnonymous: Boolean get() = this != SFTP
     val supportsKeys: Boolean get() = this == SFTP
+    val needsShare: Boolean get() = this == SMB
 }
 
 /** A saved remote storage. Secrets live here too; the whole list is stored encrypted (see [ConnectionStore]). */
@@ -35,6 +39,8 @@ data class Connection(
     val keyPassphrase: String? = null,
     /** Folder to open after connecting. */
     val path: String = "/",
+    /** SMB share name, e.g. "Public". */
+    val share: String = "",
 ) {
     /** The [io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem] id this connection is registered under. */
     val fsId: String get() = fsIdFor(id)
@@ -51,7 +57,7 @@ data class Connection(
 /** Binary format for the saved connections (kept free of Android APIs so it is unit-testable). */
 internal object ConnectionCodec {
     private const val MAGIC = 0x4C45434E // "LECN"
-    private const val VERSION = 1
+    private const val VERSION = 2
 
     fun encode(connections: List<Connection>): ByteArray {
         val bytes = ByteArrayOutputStream()
@@ -70,6 +76,7 @@ internal object ConnectionCodec {
                 writeNullable(out, c.privateKey)
                 writeNullable(out, c.keyPassphrase)
                 out.writeUTF(c.path)
+                out.writeUTF(c.share)
             }
         }
         return bytes.toByteArray()
@@ -78,7 +85,7 @@ internal object ConnectionCodec {
     fun decode(bytes: ByteArray): List<Connection> = DataInputStream(ByteArrayInputStream(bytes)).use { input ->
         if (input.readInt() != MAGIC) throw FsException("Saved connections are damaged")
         val version = input.readInt()
-        if (version != VERSION) throw FsException("Saved connections need a newer LinusExplorer (format $version)")
+        if (version > VERSION) throw FsException("Saved connections need a newer LinusExplorer (format $version)")
         List(input.readInt()) {
             Connection(
                 id = input.readUTF(),
@@ -91,6 +98,7 @@ internal object ConnectionCodec {
                 privateKey = readNullable(input),
                 keyPassphrase = readNullable(input),
                 path = input.readUTF(),
+                share = if (version >= 2) input.readUTF() else "",
             )
         }
     }
