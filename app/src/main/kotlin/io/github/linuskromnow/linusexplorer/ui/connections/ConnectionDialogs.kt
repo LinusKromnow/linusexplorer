@@ -2,6 +2,7 @@ package io.github.linuskromnow.linusexplorer.ui.connections
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -80,7 +81,10 @@ fun ConnectionDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.horizontalScroll(rememberScrollState()),
+                ) {
                     Protocol.entries.forEach { option ->
                         FilterChip(
                             selected = protocol == option,
@@ -121,6 +125,7 @@ fun ConnectionDialog(
                     PasswordField(keyPassphrase, { keyPassphrase = it }, stringResource(R.string.connection_key_passphrase))
                 }
                 if (protocol.needsShare) Field(share, { share = it.trim().trim('/', '\\') }, stringResource(R.string.connection_share))
+                if (protocol.isWebDav) Field(share, { share = it.trim() }, stringResource(R.string.connection_server_path))
                 Field(path, { path = it.trim() }, stringResource(R.string.connection_path))
                 if (existing != null) {
                     TextButton(onClick = { onDelete(existing) }) {
@@ -145,7 +150,7 @@ fun ConnectionDialog(
                             privateKey = if (keyAuth) privateKey else null,
                             keyPassphrase = if (keyAuth) keyPassphrase.ifEmpty { null } else null,
                             path = VfsPaths.normalize(path.ifBlank { VfsPaths.ROOT }),
-                            share = if (protocol.needsShare) share else "",
+                            share = if (protocol.needsShare || protocol.isWebDav) share else "",
                         ),
                     )
                 },

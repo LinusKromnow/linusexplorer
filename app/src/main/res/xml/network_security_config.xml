@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    LinusExplorer only connects to servers the user adds. Plain HTTP is needed for the
+    "WebDAV (HTTP)" option on local networks, which the user chooses explicitly.
+    HTTPS still trusts only the system CAs (self-signed servers go through the in-app trust prompt).
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

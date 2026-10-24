@@ -5,6 +5,8 @@ import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.ftp.FtpFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.sftp.SftpFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.smb.SmbFileSystem
+import io.github.linuskromnow.linusexplorer.fs.network.webdav.WebDavFileSystem
+import okhttp3.OkHttpClient
 import java.io.Closeable
 
 /** Creates, registers and tears down the file systems behind saved [Connection]s. */
@@ -13,6 +15,9 @@ class NetworkFileSystems(
     val store: ConnectionStore,
     val knownHosts: KnownHosts,
 ) {
+    /** Shared so all WebDAV connections reuse one connection pool and thread pool. */
+    private val httpClient by lazy { OkHttpClient() }
+
     /** Registers (or returns the already registered) file system for [connection]. */
     fun open(connection: Connection): VirtualFileSystem =
         registry.find(connection.fsId) ?: create(connection).also { registry.register(it) }
@@ -40,5 +45,6 @@ class NetworkFileSystems(
         Protocol.SFTP -> SftpFileSystem(connection, knownHosts)
         Protocol.FTP, Protocol.FTPS -> FtpFileSystem(connection, knownHosts)
         Protocol.SMB -> SmbFileSystem(connection)
+        Protocol.WEBDAV, Protocol.WEBDAV_HTTP -> WebDavFileSystem(connection, knownHosts, httpClient)
     }
 }
