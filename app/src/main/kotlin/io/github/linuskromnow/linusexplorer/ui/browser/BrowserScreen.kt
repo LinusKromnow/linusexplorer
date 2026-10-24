@@ -70,6 +70,8 @@ import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.security.Biometrics
 import io.github.linuskromnow.linusexplorer.security.SecureWindow
+import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
+import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
 import io.github.linuskromnow.linusexplorer.storage.StorageAccess
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockSettingsDialog
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
@@ -83,6 +85,7 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel(), lockViewModel: AppL
     val lockState by lockViewModel.state.collectAsStateWithLifecycle()
     var showAppLockSettings by rememberSaveable { mutableStateOf(false) }
     SecureWindow(lockState.enabled || state.inVault)
+    val vaultPrompt = VaultBiometrics.Prompt(stringResource(R.string.vault_biometric_enable_title), stringResource(R.string.action_cancel))
     val context = LocalContext.current
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
@@ -166,6 +169,17 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel(), lockViewModel: AppL
                         prefs = state.prefs,
                         readOnly = state.readOnly,
                         inVault = state.inVault,
+                        vaultBiometric = state.vaultBiometric.takeIf { viewModel.vaultBiometrics.isAvailable(context) },
+                        onToggleVaultBiometric = {
+                            val activity = context.findFragmentActivity()
+                            val key = viewModel.vaultMasterKey()
+                            if (state.vaultBiometric) {
+                                viewModel.vaultBiometrics.disable()
+                                viewModel.onVaultBiometricChanged()
+                            } else if (activity != null && key != null) {
+                                viewModel.vaultBiometrics.enable(activity, key, vaultPrompt) { viewModel.onVaultBiometricChanged() }
+                            }
+                        },
                         onMenuClick = { scope.launch { drawerState.open() } },
                         viewModel = viewModel,
                     )
@@ -230,6 +244,9 @@ private fun BrowserTopBar(
     prefs: BrowserPrefs,
     readOnly: Boolean,
     inVault: Boolean,
+    /** Fingerprint unlock state for the vault; null when the device has no strong biometrics. */
+    vaultBiometric: Boolean?,
+    onToggleVaultBiometric: () -> Unit,
     onMenuClick: () -> Unit,
     viewModel: BrowserViewModel,
 ) {
@@ -297,6 +314,19 @@ private fun BrowserTopBar(
                         onClick = {
                             overflowOpen = false
                             viewModel.showDialog(BrowserDialog.ChangeVaultPassword)
+                        },
+                    )
+                    if (vaultBiometric != null) {
+                        CheckableMenuItem(stringResource(R.string.vault_biometric), vaultBiometric) {
+                            overflowOpen = false
+                            onToggleVaultBiometric()
+                        }
+                    }
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_backup_vault)) },
+                        onClick = {
+                            overflowOpen = false
+                            viewModel.backupVault()
                         },
                     )
                 }

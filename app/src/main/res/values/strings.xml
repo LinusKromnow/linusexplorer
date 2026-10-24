@@ -138,6 +138,17 @@
     <string name="msg_vault_created">Vault created</string>
     <string name="msg_vault_locked">Vault locked</string>
     <string name="msg_vault_password_changed">Vault password changed</string>
+    <string name="vault_unlock_title">Unlock private vault</string>
+    <string name="vault_biometric">Unlock with fingerprint</string>
+    <string name="vault_biometric_enable_title">Confirm fingerprint for the vault</string>
+    <string name="action_backup_vault">Back up vault</string>
+    <string name="action_restore">Restore</string>
+    <string name="vault_restore_title">Restore vault?</string>
+    <string name="vault_restore_body">This replaces the current vault and everything in it with the backup “%1$s”. Afterwards, unlock it with the password the backup was made with.</string>
+    <string name="transfer_backing_up">Backing up vault</string>
+    <string name="transfer_restoring">Restoring vault</string>
+    <string name="msg_vault_backed_up">Vault saved to Download/%1$s</string>
+    <string name="msg_vault_restored">Vault restored</string>
     <plurals name="msg_moved_to_vault">
         <item quantity="one">Moved %d item to the vault</item>
         <item quantity="other">Moved %d items to the vault</item>

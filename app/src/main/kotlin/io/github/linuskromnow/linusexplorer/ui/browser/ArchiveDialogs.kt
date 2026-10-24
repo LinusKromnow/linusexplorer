@@ -4,11 +4,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -73,10 +76,17 @@ fun PasswordField(
 }
 
 @Composable
-fun PasswordDialog(dialog: BrowserDialog.Password, onSubmit: (String) -> Unit, onDismiss: () -> Unit) {
+fun PasswordDialog(
+    dialog: BrowserDialog.Password,
+    onSubmit: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onBiometric: (() -> Unit)? = null,
+) {
     var password by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    LaunchedEffect(Unit) {
+        if (onBiometric != null && !dialog.wrongPassword) onBiometric() else focusRequester.requestFocus()
+    }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.password_title)) },
@@ -92,6 +102,13 @@ fun PasswordDialog(dialog: BrowserDialog.Password, onSubmit: (String) -> Unit, o
                     onDone = { if (password.isNotEmpty()) onSubmit(password) },
                     modifier = Modifier.focusRequester(focusRequester),
                 )
+                if (onBiometric != null) {
+                    TextButton(onClick = onBiometric) {
+                        Icon(Icons.Default.Fingerprint, contentDescription = null)
+                        Spacer(Modifier.size(8.dp))
+                        Text(stringResource(R.string.lock_use_biometric))
+                    }
+                }
             }
         },
         confirmButton = {

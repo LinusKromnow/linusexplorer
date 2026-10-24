@@ -28,6 +28,9 @@ import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
 
 /**
  * Password-protected, encrypted storage inside the app's private directory.
@@ -83,8 +86,80 @@ class VaultFileSystem(
         pendingPassword = password
     }
 
+    /**
+     * Unlocks with a master key recovered another way (fingerprint). Throws
+     * [PasswordRequiredFsException] if the key cannot decrypt this vault's index.
+     */
+    suspend fun unlockWithKey(key: ByteArray) = io {
+        synchronized(lock) {
+            if (masterKey == null) {
+                try {
+                    loadIndex(key)
+                } catch (e: IOException) {
+                    entries.clear()
+                    throw PasswordRequiredFsException(ID, wrongPassword = true, e)
+                }
+                masterKey = key.copyOf()
+            }
+        }
+    }
+
+    /** A copy of the master key (null while locked), e.g. to protect it with a fingerprint key. */
+    fun masterKeyCopy(): ByteArray? = masterKey?.copyOf()
+
+    /** Writes the whole vault (already encrypted) as one zip; it can be restored with [restoreFrom]. */
+    suspend fun backupTo(output: OutputStream) = io {
+        synchronized(lock) {
+            ZipOutputStream(output.buffered()).use { zip ->
+                zip.setLevel(0) // ciphertext doesn't compress
+                for (file in listOf(keyFile, indexFile) + (objectsDir.listFiles()?.toList() ?: emptyList())) {
+                    zip.putNextEntry(ZipEntry(file.relativeTo(root).invariantSeparatorsPath))
+                    file.inputStream().use { it.copyTo(zip) }
+                    zip.closeEntry()
+                }
+            }
+        }
+    }
+
+    /**
+     * Replaces this vault with a backup made by [backupTo]. The vault is locked afterwards and opens
+     * with the password it had when the backup was made.
+     */
+    suspend fun restoreFrom(input: InputStream) = io {
+        synchronized(lock) {
+            val parent = root.absoluteFile.parentFile
+            val staging = File(parent, "${root.name}.restore").apply { deleteRecursively(); mkdirs() }
+            try {
+                ZipInputStream(input.buffered()).use { zip ->
+                    while (true) {
+                        val entry = zip.nextEntry ?: break
+                        val name = entry.name
+                        val allowed = name == "key.age" || name == "index" || BACKUP_OBJECT.matches(name)
+                        if (!allowed || entry.isDirectory) throw FsException("This is not a LinusExplorer vault backup")
+                        val target = File(staging, name).apply { parentFile?.mkdirs() }
+                        target.outputStream().use { zip.copyTo(it) }
+                    }
+                }
+                if (!File(staging, "key.age").exists() || !File(staging, "index").exists()) {
+                    throw FsException("This is not a LinusExplorer vault backup")
+                }
+                File(staging, "objects").mkdirs()
+                lockLocked()
+                val old = File(parent, "${root.name}.old").apply { deleteRecursively() }
+                if (root.exists()) Files.move(root.toPath(), old.toPath())
+                Files.move(staging.toPath(), root.toPath())
+                old.deleteRecursively()
+            } finally {
+                staging.deleteRecursively()
+            }
+        }
+    }
+
     /** Forgets the master key and the decrypted index. */
-    fun lock() = synchronized(lock) {
+    fun lock() = synchronized(lock) { lockLocked() }
+
+    /** Caller holds [lock]. */
+    private fun lockLocked() {
         masterKey?.fill(0)
         masterKey = null
         pendingPassword = null
@@ -276,6 +351,8 @@ class VaultFileSystem(
 
     companion object {
         const val ID = "vault"
+        const val BACKUP_EXTENSION = ".lxvault"
+        private val BACKUP_OBJECT = Regex("objects/[0-9a-f-]{36}")
     }
 }
 

@@ -22,6 +22,8 @@ data class BrowserUiState(
     val canGoBack: Boolean = false,
     val dialog: BrowserDialog? = null,
     val transfer: TransferState? = null,
+    /** Whether the vault can be unlocked with a fingerprint. */
+    val vaultBiometric: Boolean = false,
 ) {
     val inSelectionMode: Boolean get() = selection.isNotEmpty()
     val inVault: Boolean get() = location.fsId == VaultFileSystem.ID
@@ -32,7 +34,7 @@ data class Breadcrumb(val label: String, val path: String)
 
 data class Clipboard(val items: List<Location>, val isCut: Boolean)
 
-enum class TransferKind { COPY, MOVE, COMPRESS, EXTRACT, OPEN, ENCRYPT, DECRYPT }
+enum class TransferKind { COPY, MOVE, COMPRESS, EXTRACT, OPEN, ENCRYPT, DECRYPT, BACKUP, RESTORE }
 
 data class TransferState(val kind: TransferKind, val progress: TransferProgress? = null)
 
@@ -49,6 +51,7 @@ sealed interface BrowserDialog {
     data class Decrypt(val entry: FileEntry, val open: Boolean, val wrongPassword: Boolean = false) : BrowserDialog
     data object CreateVault : BrowserDialog
     data object ChangeVaultPassword : BrowserDialog
+    data class RestoreVault(val entry: FileEntry) : BrowserDialog
 }
 
 sealed interface BrowserEvent {

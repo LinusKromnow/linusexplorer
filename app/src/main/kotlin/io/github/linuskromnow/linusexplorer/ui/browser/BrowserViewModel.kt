@@ -36,7 +36,9 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.os.Environment
 import java.io.File
+import java.time.LocalDate
 import java.util.UUID
 
 class BrowserViewModel(application: Application) : AndroidViewModel(application) {
@@ -63,10 +65,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private var afterPassword: (() -> Unit)? = null
 
     private val vault = container.vault
+
+    /** Needed by the UI to turn fingerprint unlock on (it wraps the key behind a biometric prompt). */
+    val vaultBiometrics = container.vaultBiometrics
     private var backgroundSince: Long? = null
 
     init {
         refreshPlaces()
+        onVaultBiometricChanged()
         viewModelScope.launch {
             preferences.browser.collect { prefs ->
                 _state.update { it.copy(prefs = prefs, entries = FileSorting.sort(unsortedEntries, prefs)) }
@@ -177,6 +183,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             _state.value.inSelectionMode -> toggleSelection(entry)
             entry.isDirectory -> navigateTo(entry.path)
             FileEncryption.isEncrypted(entry.name) -> showDialog(BrowserDialog.Decrypt(entry, open = true))
+            entry.name.endsWith(VaultFileSystem.BACKUP_EXTENSION) && location.fsId == LocalFileSystem.ID ->
+                showDialog(BrowserDialog.RestoreVault(entry))
             ArchiveFormat.detect(entry.name) != null -> openArchive(entry)
             location.fsId == LocalFileSystem.ID -> _events.trySend(BrowserEvent.OpenFile(entry.path))
             else -> openViaCache(entry)
@@ -353,6 +361,52 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: AgeNoMatchException) {
                 showDialog(dialog.copy(wrongPassword = true))
             }
+        }
+    }
+
+    fun vaultMasterKey(): ByteArray? = vault.masterKeyCopy()
+
+    fun onVaultBiometricChanged() {
+        _state.update { it.copy(vaultBiometric = vaultBiometrics.isEnabled) }
+    }
+
+    fun unlockVaultWithKey(key: ByteArray) {
+        _state.update { it.copy(dialog = null) }
+        viewModelScope.launch {
+            try {
+                vault.unlockWithKey(key)
+                afterPassword?.invoke()
+                afterPassword = null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                sendError(e)
+            } finally {
+                key.fill(0)
+            }
+        }
+    }
+
+    /** Saves the (still encrypted) vault as one file in Downloads, so it survives reinstalling the app. */
+    fun backupVault() {
+        runTransfer(TransferKind.BACKUP, retry = {}) {
+            val local = fileSystems[LocalFileSystem.ID]
+            val downloads = File(Places.primaryStoragePath(), Environment.DIRECTORY_DOWNLOADS).apply { mkdirs() }.path
+            val name = FileTransfer.uniqueName(local, downloads, "LinusExplorer-vault-${LocalDate.now()}${VaultFileSystem.BACKUP_EXTENSION}", false)
+            local.openOutput(VfsPaths.child(downloads, name)).use { vault.backupTo(it) }
+            _events.trySend(BrowserEvent.Message(R.string.msg_vault_backed_up, listOf(name)))
+        }
+    }
+
+    fun restoreVault(entry: FileEntry) {
+        val location = _state.value.location
+        _state.update { it.copy(dialog = null) }
+        runTransfer(TransferKind.RESTORE, retry = {}) {
+            fileSystems[location.fsId].openInput(entry.path).use { vault.restoreFrom(it) }
+            vaultBiometrics.disable() // the restored vault has a different master key
+            onVaultBiometricChanged()
+            history.removeAll { it.fsId == VaultFileSystem.ID }
+            _events.trySend(BrowserEvent.Message(R.string.msg_vault_restored))
         }
     }
 

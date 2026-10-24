@@ -35,7 +35,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.platform.LocalContext
 import io.github.linuskromnow.linusexplorer.R
+import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
+import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
+import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 
 @Composable
@@ -116,10 +120,41 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
             onConfirm = { password, _ -> viewModel.changeVaultPassword(password) },
             onDismiss = viewModel::dismissDialog,
         )
-        is BrowserDialog.Password -> PasswordDialog(
-            dialog = dialog,
-            onSubmit = { viewModel.submitPassword(dialog, it) },
-            onDismiss = viewModel::dismissDialog,
+        is BrowserDialog.Password -> {
+            val activity = LocalContext.current.findFragmentActivity()
+            val biometrics = viewModel.vaultBiometrics
+            val prompt = VaultBiometrics.Prompt(stringResource(R.string.vault_unlock_title), stringResource(R.string.lock_biometric_negative))
+            val onBiometric = if (dialog.fsId == VaultFileSystem.ID && activity != null && biometrics.isEnabled && biometrics.isAvailable(activity)) {
+                {
+                    biometrics.unlock(
+                        activity,
+                        prompt,
+                        onKey = viewModel::unlockVaultWithKey,
+                        onInvalidated = viewModel::onVaultBiometricChanged,
+                    )
+                }
+            } else {
+                null
+            }
+            PasswordDialog(
+                dialog = dialog,
+                onSubmit = { viewModel.submitPassword(dialog, it) },
+                onDismiss = viewModel::dismissDialog,
+                onBiometric = onBiometric,
+            )
+        }
+        is BrowserDialog.RestoreVault -> AlertDialog(
+            onDismissRequest = viewModel::dismissDialog,
+            title = { Text(stringResource(R.string.vault_restore_title)) },
+            text = { Text(stringResource(R.string.vault_restore_body, dialog.entry.name)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.restoreVault(dialog.entry) }) {
+                    Text(stringResource(R.string.action_restore), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissDialog) { Text(stringResource(R.string.action_cancel)) }
+            },
         )
     }
 }
@@ -183,6 +218,8 @@ fun TransferDialog(transfer: TransferState, onCancel: () -> Unit) {
                 TransferKind.OPEN -> R.string.transfer_opening
                 TransferKind.ENCRYPT -> R.string.transfer_encrypting
                 TransferKind.DECRYPT -> R.string.transfer_decrypting
+                TransferKind.BACKUP -> R.string.transfer_backing_up
+                TransferKind.RESTORE -> R.string.transfer_restoring
             }
             Text(stringResource(title))
         },
