@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.bouncycastle)
     implementation(libs.bouncycastle.pkix) // sshj needs it; pinned to match bcprov
     implementation(libs.sshj)
+    implementation(libs.commons.net)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment) // FragmentActivity for BiometricPrompt; newer than biometric's own
     // Thumbnails. Deliberately no coil-network-*: the app has no network access.
@@ -94,4 +95,5 @@ dependencies {
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.mina.sshd.core) // in-process SFTP server for network tests
     testImplementation(libs.mina.sshd.sftp)
+    testImplementation(libs.ftpserver.core) // in-process FTP/FTPS server for network tests
 }

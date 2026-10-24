@@ -212,6 +212,7 @@
     <string name="connection_host">Server</string>
     <string name="connection_port">Port</string>
     <string name="connection_username">User name</string>
+    <string name="connection_username_anonymous">User name (empty for anonymous)</string>
     <string name="connection_auth_password">Password</string>
     <string name="connection_auth_key">Private key</string>
     <string name="connection_remember_password">Remember password (stored encrypted)</string>
