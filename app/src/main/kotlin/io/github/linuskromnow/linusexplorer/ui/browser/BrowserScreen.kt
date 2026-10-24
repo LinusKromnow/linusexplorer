@@ -1,6 +1,12 @@
 package io.github.linuskromnow.linusexplorer.ui.browser
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.core.content.ContextCompat
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -200,6 +206,16 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel(), lockViewModel: AppL
                     return@Column
                 }
                 BreadcrumbBar(state.breadcrumbs, onClick = { viewModel.navigateTo(it.path) })
+                val hiddenTransfer = state.transfer?.takeIf { state.transferHidden }
+                if (hiddenTransfer != null) {
+                    val progress = hiddenTransfer.progress
+                    val modifier = Modifier.fillMaxWidth().clickable(onClick = viewModel::showTransfer)
+                    if (progress == null) {
+                        LinearProgressIndicator(modifier)
+                    } else {
+                        LinearProgressIndicator(progress = { progress.fraction }, modifier = modifier)
+                    }
+                }
                 HorizontalDivider()
                 PullToRefreshBox(
                     isRefreshing = state.isLoading,
@@ -234,7 +250,25 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel(), lockViewModel: AppL
             onDismiss = close,
         )
     }
-    state.transfer?.let { TransferDialog(it, onCancel = viewModel::cancelTransfer) }
+    state.transfer?.let { transfer ->
+        val conflict = transfer.conflict
+        when {
+            conflict != null -> ConflictDialog(conflict, onResolve = viewModel::resolveConflict, onCancel = viewModel::cancelTransfer)
+            !state.transferHidden -> TransferDialog(transfer, onCancel = viewModel::cancelTransfer, onHide = viewModel::hideTransfer)
+        }
+    }
+
+    // The progress notification needs this permission on Android 13+; ask the first time a task runs.
+    val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    var askedForNotifications by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.transfer != null) {
+        if (state.transfer != null && !askedForNotifications && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            askedForNotifications = true
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

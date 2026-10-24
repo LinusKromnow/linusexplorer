@@ -37,6 +37,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
 import io.github.linuskromnow.linusexplorer.R
+import io.github.linuskromnow.linusexplorer.fs.ConflictResolution
+import io.github.linuskromnow.linusexplorer.tasks.ConflictRequest
+import io.github.linuskromnow.linusexplorer.tasks.TransferState
+import androidx.compose.foundation.layout.Row
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
 import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
@@ -205,24 +209,11 @@ private fun NameDialog(
 }
 
 @Composable
-fun TransferDialog(transfer: TransferState, onCancel: () -> Unit) {
+fun TransferDialog(transfer: TransferState, onCancel: () -> Unit, onHide: () -> Unit) {
     val progress = transfer.progress
     AlertDialog(
-        onDismissRequest = {}, // a running transfer is only stopped through Cancel
-        title = {
-            val title = when (transfer.kind) {
-                TransferKind.COPY -> R.string.transfer_copying
-                TransferKind.MOVE -> R.string.transfer_moving
-                TransferKind.COMPRESS -> R.string.transfer_compressing
-                TransferKind.EXTRACT -> R.string.transfer_extracting
-                TransferKind.OPEN -> R.string.transfer_opening
-                TransferKind.ENCRYPT -> R.string.transfer_encrypting
-                TransferKind.DECRYPT -> R.string.transfer_decrypting
-                TransferKind.BACKUP -> R.string.transfer_backing_up
-                TransferKind.RESTORE -> R.string.transfer_restoring
-            }
-            Text(stringResource(title))
-        },
+        onDismissRequest = onHide,
+        title = { Text(stringResource(transfer.kind.titleRes)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (progress == null) {
@@ -244,7 +235,41 @@ fun TransferDialog(transfer: TransferState, onCancel: () -> Unit) {
             }
         },
         confirmButton = {
+            TextButton(onClick = onHide) { Text(stringResource(R.string.action_hide)) }
+        },
+        dismissButton = {
             TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+@Composable
+fun ConflictDialog(conflict: ConflictRequest, onResolve: (ConflictResolution, applyToAll: Boolean) -> Unit, onCancel: () -> Unit) {
+    var applyToAll by remember(conflict) { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = {}, // the task waits for an answer
+        title = { Text(stringResource(R.string.conflict_title, conflict.existing.name)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(if (conflict.bothFolders) R.string.conflict_body_folder else R.string.conflict_body_file))
+                CheckboxRow(stringResource(R.string.conflict_apply_to_all), applyToAll) { applyToAll = it }
+                Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = onCancel) { Text(stringResource(R.string.action_cancel)) }
+                }
+            }
+        },
+        confirmButton = {
+            Row {
+                TextButton(onClick = { onResolve(ConflictResolution.SKIP, applyToAll) }) {
+                    Text(stringResource(R.string.conflict_skip))
+                }
+                TextButton(onClick = { onResolve(ConflictResolution.KEEP_BOTH, applyToAll) }) {
+                    Text(stringResource(R.string.conflict_keep_both))
+                }
+                TextButton(onClick = { onResolve(ConflictResolution.REPLACE, applyToAll) }) {
+                    Text(stringResource(if (conflict.bothFolders) R.string.conflict_merge else R.string.conflict_replace))
+                }
+            }
         },
     )
 }

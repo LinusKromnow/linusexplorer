@@ -4,7 +4,7 @@ import android.content.res.Resources
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.Location
-import io.github.linuskromnow.linusexplorer.fs.TransferProgress
+import io.github.linuskromnow.linusexplorer.tasks.TransferState
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.storage.Place
 
@@ -22,6 +22,8 @@ data class BrowserUiState(
     val canGoBack: Boolean = false,
     val dialog: BrowserDialog? = null,
     val transfer: TransferState? = null,
+    /** The user sent the running task to the background; only a slim progress bar remains. */
+    val transferHidden: Boolean = false,
     /** Whether the vault can be unlocked with a fingerprint. */
     val vaultBiometric: Boolean = false,
 ) {
@@ -34,9 +36,6 @@ data class Breadcrumb(val label: String, val path: String)
 
 data class Clipboard(val items: List<Location>, val isCut: Boolean)
 
-enum class TransferKind { COPY, MOVE, COMPRESS, EXTRACT, OPEN, ENCRYPT, DECRYPT, BACKUP, RESTORE }
-
-data class TransferState(val kind: TransferKind, val progress: TransferProgress? = null)
 
 sealed interface BrowserDialog {
     data object NewFolder : BrowserDialog

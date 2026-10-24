@@ -66,6 +66,19 @@
     <string name="transfer_extracting">Extracting</string>
     <string name="transfer_opening">Opening</string>
     <string name="transfer_preparing">Preparing…</string>
+    <string name="transfer_deleting">Deleting</string>
+    <string name="action_hide">Hide</string>
+    <string name="msg_task_busy">Another operation is still running</string>
+    <string name="notification_channel_transfers">File operations</string>
+    <string name="notification_waiting_for_decision">Waiting for your decision</string>
+    <string name="conflict_title">“%1$s” already exists</string>
+    <string name="conflict_body_file">Replace it with the one you are copying?</string>
+    <string name="conflict_body_folder">Merge the folders? Files with the same name will be asked about one by one.</string>
+    <string name="conflict_replace">Replace</string>
+    <string name="conflict_merge">Merge</string>
+    <string name="conflict_skip">Skip</string>
+    <string name="conflict_keep_both">Keep both</string>
+    <string name="conflict_apply_to_all">Do this for all conflicts</string>
 
     <!-- Archives -->
     <string name="action_compress">Compress</string>

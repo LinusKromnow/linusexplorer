@@ -55,6 +55,13 @@ internal class ProgressTracker(
         emit()
     }
 
+    /** Counts files that were skipped as done so the progress bar still reaches the end. */
+    fun skip(files: Int, bytes: Long) {
+        filesDone += files
+        bytesDone += bytes
+        emit()
+    }
+
     private fun emit() = onProgress(TransferProgress(filesDone, filesTotal, bytesDone, bytesTotal, current))
 }
 

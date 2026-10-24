@@ -8,6 +8,8 @@ import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
+import io.github.linuskromnow.linusexplorer.tasks.TaskManager
+import io.github.linuskromnow.linusexplorer.tasks.TransferService
 import io.github.linuskromnow.linusexplorer.ui.browser.BrowserViewModel
 import java.io.File
 
@@ -18,6 +20,7 @@ class LinusExplorerApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        TransferService.createChannel(this)
         // Files decrypted or unpacked for other apps only need to live until the next start.
         Thread { File(cacheDir, BrowserViewModel.OPEN_CACHE).deleteRecursively() }.start()
     }
@@ -33,4 +36,5 @@ class AppContainer(context: Context) {
     }
     val fileTransfer = FileTransfer(fileSystems)
     val preferences = UserPreferences(context)
+    val tasks = TaskManager(context.applicationContext)
 }

@@ -10,8 +10,8 @@
 - [x] CI on GitHub Actions; fastlane metadata for F-Droid / Play
 
 ## v0.2: core file-manager polish
-- [ ] Run transfers in a foreground service so they survive leaving the app; notification with progress
-- [ ] Conflict dialog (replace / skip / keep both) instead of always auto-renaming
+- [x] Run transfers in a foreground service so they survive leaving the app; notification with progress
+- [x] Conflict dialog (replace / skip / keep both / merge folders, "apply to all")
 - [ ] Image/video thumbnails (Coil) and APK icons
 - [ ] Grid view, search (recursive, by name), properties dialog (size of folder, checksums)
 - [ ] Bookmarks and recent folders; tabs or dual-pane on tablets
