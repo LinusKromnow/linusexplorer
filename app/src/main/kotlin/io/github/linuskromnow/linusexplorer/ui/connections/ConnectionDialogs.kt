@@ -32,6 +32,7 @@ import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import io.github.linuskromnow.linusexplorer.fs.network.Protocol
+import io.github.linuskromnow.linusexplorer.fs.network.s3.S3FileSystem
 import io.github.linuskromnow.linusexplorer.ui.browser.CheckboxRow
 import io.github.linuskromnow.linusexplorer.ui.browser.PasswordField
 
@@ -58,6 +59,7 @@ fun ConnectionDialog(
     var keyPassphrase by rememberSaveable { mutableStateOf(existing?.keyPassphrase.orEmpty()) }
     var path by rememberSaveable { mutableStateOf(existing?.path ?: VfsPaths.ROOT) }
     var share by rememberSaveable { mutableStateOf(existing?.share.orEmpty()) }
+    var region by rememberSaveable { mutableStateOf(existing?.region.orEmpty()) }
     var keyError by rememberSaveable { mutableStateOf(false) }
 
     val keyPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -104,7 +106,13 @@ fun ConnectionDialog(
                 Field(
                     username,
                     { username = it.trim() },
-                    stringResource(if (protocol.allowsAnonymous) R.string.connection_username_anonymous else R.string.connection_username),
+                    stringResource(
+                        when {
+                            protocol.isS3 -> R.string.connection_access_key
+                            protocol.allowsAnonymous -> R.string.connection_username_anonymous
+                            else -> R.string.connection_username
+                        },
+                    ),
                 )
                 if (protocol.supportsKeys) {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -113,7 +121,7 @@ fun ConnectionDialog(
                     }
                 }
                 if (!keyAuth) {
-                    PasswordField(password, { password = it }, stringResource(R.string.field_password))
+                    PasswordField(password, { password = it }, stringResource(if (protocol.isS3) R.string.connection_secret_key else R.string.field_password))
                     CheckboxRow(stringResource(R.string.connection_remember_password), rememberPassword) { rememberPassword = it }
                 } else {
                     OutlinedButton(onClick = { keyPicker.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
@@ -124,7 +132,12 @@ fun ConnectionDialog(
                     }
                     PasswordField(keyPassphrase, { keyPassphrase = it }, stringResource(R.string.connection_key_passphrase))
                 }
-                if (protocol.needsShare) Field(share, { share = it.trim().trim('/', '\\') }, stringResource(R.string.connection_share))
+                if (protocol.needsShare) {
+                    Field(share, { share = it.trim().trim('/', '\\') }, stringResource(if (protocol.isS3) R.string.connection_bucket else R.string.connection_share))
+                }
+                if (protocol.isS3) {
+                    Field(region, { region = it.trim() }, stringResource(R.string.connection_region, S3FileSystem.guessRegion(host)))
+                }
                 if (protocol.isWebDav) Field(share, { share = it.trim() }, stringResource(R.string.connection_server_path))
                 Field(path, { path = it.trim() }, stringResource(R.string.connection_path))
                 if (existing != null) {
@@ -151,6 +164,7 @@ fun ConnectionDialog(
                             keyPassphrase = if (keyAuth) keyPassphrase.ifEmpty { null } else null,
                             path = VfsPaths.normalize(path.ifBlank { VfsPaths.ROOT }),
                             share = if (protocol.needsShare || protocol.isWebDav) share else "",
+                            region = if (protocol.isS3) region else "",
                         ),
                     )
                 },

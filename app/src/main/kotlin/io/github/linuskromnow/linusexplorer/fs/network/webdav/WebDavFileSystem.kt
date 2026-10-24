@@ -1,6 +1,5 @@
 package io.github.linuskromnow.linusexplorer.fs.network.webdav
 
-import android.annotation.SuppressLint
 import io.github.linuskromnow.linusexplorer.fs.AccessDeniedFsException
 import io.github.linuskromnow.linusexplorer.fs.AlreadyExistsFsException
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
@@ -13,6 +12,8 @@ import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import io.github.linuskromnow.linusexplorer.fs.network.KnownHosts
 import io.github.linuskromnow.linusexplorer.fs.network.Protocol
+import io.github.linuskromnow.linusexplorer.fs.network.TofuTrustManager
+import io.github.linuskromnow.linusexplorer.fs.network.trustOnFirstUse
 import io.github.linuskromnow.linusexplorer.fs.network.UntrustedHostKeyException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,17 +34,10 @@ import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
-import java.security.KeyStore
-import java.security.cert.CertificateException
-import java.security.cert.X509Certificate
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
-import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLContext
 import javax.net.ssl.SSLHandshakeException
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
 
 /**
  * WebDAV (Nextcloud, ownCloud, NAS, hosters). [Connection.share] is the server path that becomes
@@ -61,7 +55,7 @@ class WebDavFileSystem(
 
     private val https = connection.protocol == Protocol.WEBDAV
     private val basePath = connection.share.split('/').filter { it.isNotEmpty() }
-    private val trust = PinningTrustManager()
+    private val trust = TofuTrustManager(knownHosts, connection.host, connection.port)
 
     @Volatile private var password: CharArray? = connection.password?.toCharArray()
 
@@ -73,14 +67,7 @@ class WebDavFileSystem(
         .readTimeout(60, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
         .apply {
-            if (https) {
-                val context = SSLContext.getInstance("TLS").apply { init(null, arrayOf(trust), null) }
-                sslSocketFactory(context.socketFactory, trust)
-                hostnameVerifier { hostname, session ->
-                    HttpsURLConnection.getDefaultHostnameVerifier().verify(hostname, session) ||
-                        (session.peerCertificates.firstOrNull()?.encoded?.let { trust.isPinned(it) } == true)
-                }
-            }
+            if (https) trustOnFirstUse(trust)
         }
         .addInterceptor { chain ->
             val request = chain.request()
@@ -294,37 +281,6 @@ class WebDavFileSystem(
         val segments = requestUrl.resolve(href)?.pathSegments?.filter { it.isNotEmpty() } ?: return null
         if (segments.size < basePath.size || segments.subList(0, basePath.size) != basePath) return null
         return VfsPaths.normalize("/" + segments.drop(basePath.size).joinToString("/"))
-    }
-
-    /**
-     * System CA validation first; a certificate the user explicitly trusted (self-signed home
-     * servers) is accepted as well. Anything else is rejected and offered via the trust prompt.
-     */
-    @SuppressLint("CustomX509TrustManager")
-    private inner class PinningTrustManager : X509TrustManager {
-        @Volatile var rejected: Pair<ByteArray, Boolean>? = null
-
-        private val platform: X509TrustManager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            .apply { init(null as KeyStore?) }
-            .trustManagers.filterIsInstance<X509TrustManager>().first()
-
-        fun isPinned(cert: ByteArray) = knownHosts.check(connection.host, connection.port, cert) == KnownHosts.Verdict.TRUSTED
-
-        override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String) {
-            val cert = chain.firstOrNull()?.encoded ?: throw CertificateException("No server certificate")
-            if (isPinned(cert)) return
-            try {
-                platform.checkServerTrusted(chain, authType)
-            } catch (e: CertificateException) {
-                rejected = cert to (knownHosts.check(connection.host, connection.port, cert) == KnownHosts.Verdict.CHANGED)
-                throw e
-            }
-        }
-
-        override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) =
-            throw CertificateException("Client certificates are not used")
-
-        override fun getAcceptedIssuers(): Array<X509Certificate> = platform.acceptedIssuers
     }
 
     private companion object {

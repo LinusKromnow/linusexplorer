@@ -3,6 +3,7 @@ package io.github.linuskromnow.linusexplorer.fs.network
 import io.github.linuskromnow.linusexplorer.fs.FileSystemRegistry
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.ftp.FtpFileSystem
+import io.github.linuskromnow.linusexplorer.fs.network.s3.S3FileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.sftp.SftpFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.smb.SmbFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.webdav.WebDavFileSystem
@@ -15,7 +16,7 @@ class NetworkFileSystems(
     val store: ConnectionStore,
     val knownHosts: KnownHosts,
 ) {
-    /** Shared so all WebDAV connections reuse one connection pool and thread pool. */
+    /** Shared so all HTTP-based connections (WebDAV, S3) reuse one connection pool and thread pool. */
     private val httpClient by lazy { OkHttpClient() }
 
     /** Registers (or returns the already registered) file system for [connection]. */
@@ -46,5 +47,6 @@ class NetworkFileSystems(
         Protocol.FTP, Protocol.FTPS -> FtpFileSystem(connection, knownHosts)
         Protocol.SMB -> SmbFileSystem(connection)
         Protocol.WEBDAV, Protocol.WEBDAV_HTTP -> WebDavFileSystem(connection, knownHosts, httpClient)
+        Protocol.S3, Protocol.S3_HTTP -> S3FileSystem(connection, knownHosts, httpClient)
     }
 }
