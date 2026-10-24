@@ -15,7 +15,7 @@
 - [x] Image/video thumbnails (Coil) and APK icons
 - [x] Grid view, search (recursive, by name), properties dialog (size of folder, checksums)
 - [ ] Bookmarks and recent folders; tabs or dual-pane on tablets
-- [ ] Settings screen (theme, default folder, confirmations)
+- [x] Settings screen (theme, dynamic colors, view, files, app lock, about)
 - [x] Archives: browse and extract zip, 7z, tar(.gz/.bz2/.xz), gz/bz2/xz; create zip/7z/tar*; AES-256 zip passwords
 - [ ] RAR: only possible via the non-free UnRAR license (junrar); needs a licensing decision
 - [x] File encryption (.age, interoperable with age/rage), encrypted private vault, app lock (PIN + fingerprint)
