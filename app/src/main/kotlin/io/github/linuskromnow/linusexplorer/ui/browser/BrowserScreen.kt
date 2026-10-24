@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DrawerValue
@@ -56,10 +57,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
+import io.github.linuskromnow.linusexplorer.fs.FileEncryption
 import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.fs.SortField
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
@@ -90,6 +93,10 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
         recheckAccess() // the user may have just returned from the All files access settings page
         viewModel.refreshPlaces()
         onPauseOrDispose { }
+    }
+    LifecycleStartEffect(Unit) {
+        viewModel.onAppForeground()
+        onStopOrDispose { viewModel.onAppBackground() }
     }
     val legacyPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -125,8 +132,13 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
             PlacesDrawer(
                 places = state.places,
                 currentPath = state.location.takeIf { it.fsId == LocalFileSystem.ID }?.path,
+                vaultSelected = state.inVault,
                 onPlaceClick = { place ->
                     viewModel.navigateTo(Location(LocalFileSystem.ID, place.path))
+                    scope.launch { drawerState.close() }
+                },
+                onVaultClick = {
+                    viewModel.openVault()
                     scope.launch { drawerState.close() }
                 },
             )
@@ -141,6 +153,7 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
                         title = state.breadcrumbs.lastOrNull()?.label.orEmpty(),
                         prefs = state.prefs,
                         readOnly = state.readOnly,
+                        inVault = state.inVault,
                         onMenuClick = { scope.launch { drawerState.open() } },
                         viewModel = viewModel,
                     )
@@ -193,6 +206,7 @@ private fun BrowserTopBar(
     title: String,
     prefs: BrowserPrefs,
     readOnly: Boolean,
+    inVault: Boolean,
     onMenuClick: () -> Unit,
     viewModel: BrowserViewModel,
 ) {
@@ -254,6 +268,20 @@ private fun BrowserTopBar(
                         viewModel.refresh()
                     },
                 )
+                if (inVault) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_change_vault_password)) },
+                        onClick = {
+                            overflowOpen = false
+                            viewModel.showDialog(BrowserDialog.ChangeVaultPassword)
+                        },
+                    )
+                }
+            }
+            if (inVault) {
+                IconButton(onClick = viewModel::lockVault) {
+                    Icon(Icons.Default.Lock, contentDescription = stringResource(R.string.action_lock_vault))
+                }
             }
         },
     )
@@ -293,6 +321,12 @@ private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel) 
                     if (!state.readOnly) {
                         add(MenuAction(R.string.action_rename, enabled = single != null, viewModel::requestRename))
                         add(MenuAction(R.string.action_compress, action = viewModel::requestCompress))
+                        if (single != null && FileEncryption.isEncrypted(single.name)) {
+                            add(MenuAction(R.string.action_decrypt, action = viewModel::requestDecrypt))
+                        } else {
+                            add(MenuAction(R.string.action_encrypt, enabled = selected.none { it.isDirectory }, viewModel::requestEncrypt))
+                        }
+                        if (!state.inVault) add(MenuAction(R.string.action_move_to_vault, action = viewModel::moveSelectionToVault))
                     }
                     if (isLocal && single != null && ArchiveFormat.detect(single.name) != null) {
                         add(MenuAction(R.string.action_extract, action = viewModel::extractSelection))

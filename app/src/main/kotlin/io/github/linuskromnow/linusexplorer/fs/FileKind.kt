@@ -2,7 +2,7 @@ package io.github.linuskromnow.linusexplorer.fs
 
 /** Coarse file category used for icons and, later, filtering. */
 enum class FileKind {
-    FOLDER, IMAGE, VIDEO, AUDIO, TEXT, PDF, DOCUMENT, ARCHIVE, APK, OTHER;
+    FOLDER, IMAGE, VIDEO, AUDIO, TEXT, PDF, DOCUMENT, ARCHIVE, APK, ENCRYPTED, OTHER;
 
     companion object {
         fun of(entry: FileEntry): FileKind =
@@ -18,6 +18,7 @@ enum class FileKind {
             add(DOCUMENT, "doc", "docx", "odt", "rtf", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "epub")
             add(ARCHIVE, "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz", "zst", "lz4", "iso")
             add(APK, "apk", "apks", "xapk", "aab")
+            add(ENCRYPTED, "age")
         }
     }
 }

@@ -3,3 +3,4 @@
 *.jar binary
 *.png binary
 *.webp binary
+app/src/test/resources/age-cctv/** binary

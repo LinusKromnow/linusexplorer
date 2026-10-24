@@ -83,6 +83,45 @@
     <string name="action_hide_password">Hide password</string>
     <string name="msg_extracted">Extracted to “%1$s”</string>
     <string name="msg_compressed">Created “%1$s”</string>
+
+    <!-- Encryption -->
+    <string name="action_encrypt">Encrypt</string>
+    <string name="action_decrypt">Decrypt</string>
+    <string name="action_open">Open</string>
+    <string name="action_save">Save</string>
+    <string name="field_password_repeat">Repeat password</string>
+    <plurals name="password_too_short">
+        <item quantity="one">Use at least %1$d character</item>
+        <item quantity="other">Use at least %1$d characters</item>
+    </plurals>
+    <string name="password_mismatch">Passwords don’t match</string>
+    <string name="encrypt_body">Files are encrypted with the open age format and can also be decrypted with the age command-line tool. There is no way to recover a forgotten password.</string>
+    <string name="encrypt_delete_originals">Delete the unencrypted originals</string>
+    <string name="decrypt_body">Enter the password this file was encrypted with.</string>
+    <string name="decrypt_delete_encrypted">Delete the encrypted file afterwards</string>
+    <string name="transfer_encrypting">Encrypting</string>
+    <string name="transfer_decrypting">Decrypting</string>
+    <plurals name="msg_encrypted">
+        <item quantity="one">Encrypted %d file</item>
+        <item quantity="other">Encrypted %d files</item>
+    </plurals>
+    <string name="msg_decrypted">Decrypted to “%1$s”</string>
+
+    <!-- Vault -->
+    <string name="vault_name">Private vault</string>
+    <string name="vault_create_title">Set up private vault</string>
+    <string name="vault_create_body">Files in the vault are encrypted and hidden from other apps and the gallery. Choose a password; if you forget it, the files cannot be recovered.</string>
+    <string name="vault_change_password_body">Choose a new vault password. Your files stay where they are.</string>
+    <string name="action_lock_vault">Lock vault</string>
+    <string name="action_change_vault_password">Change vault password</string>
+    <string name="action_move_to_vault">Move to vault</string>
+    <string name="msg_vault_created">Vault created</string>
+    <string name="msg_vault_locked">Vault locked</string>
+    <string name="msg_vault_password_changed">Vault password changed</string>
+    <plurals name="msg_moved_to_vault">
+        <item quantity="one">Moved %d item to the vault</item>
+        <item quantity="other">Moved %d items to the vault</item>
+    </plurals>
     <plurals name="transfer_files_progress">
         <item quantity="one">%1$d of %2$d file</item>
         <item quantity="other">%1$d of %2$d files</item>

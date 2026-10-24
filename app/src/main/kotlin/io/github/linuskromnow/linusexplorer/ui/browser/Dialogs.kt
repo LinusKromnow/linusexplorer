@@ -88,6 +88,34 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
             onConfirm = { name, format, password -> viewModel.compress(dialog.entries, name, format, password) },
             onDismiss = viewModel::dismissDialog,
         )
+        is BrowserDialog.Encrypt -> NewPasswordDialog(
+            title = stringResource(R.string.action_encrypt),
+            message = stringResource(R.string.encrypt_body),
+            confirmLabel = stringResource(R.string.action_encrypt),
+            option = stringResource(R.string.encrypt_delete_originals),
+            optionDefault = true,
+            onConfirm = { password, deleteOriginals -> viewModel.encrypt(dialog.entries, password, deleteOriginals) },
+            onDismiss = viewModel::dismissDialog,
+        )
+        is BrowserDialog.Decrypt -> DecryptDialog(
+            dialog = dialog,
+            onConfirm = { password, deleteEncrypted -> viewModel.decrypt(dialog, password, deleteEncrypted) },
+            onDismiss = viewModel::dismissDialog,
+        )
+        BrowserDialog.CreateVault -> NewPasswordDialog(
+            title = stringResource(R.string.vault_create_title),
+            message = stringResource(R.string.vault_create_body),
+            confirmLabel = stringResource(R.string.action_create),
+            onConfirm = { password, _ -> viewModel.createVault(password) },
+            onDismiss = viewModel::dismissDialog,
+        )
+        BrowserDialog.ChangeVaultPassword -> NewPasswordDialog(
+            title = stringResource(R.string.action_change_vault_password),
+            message = stringResource(R.string.vault_change_password_body),
+            confirmLabel = stringResource(R.string.action_save),
+            onConfirm = { password, _ -> viewModel.changeVaultPassword(password) },
+            onDismiss = viewModel::dismissDialog,
+        )
         is BrowserDialog.Password -> PasswordDialog(
             dialog = dialog,
             onSubmit = { viewModel.submitPassword(dialog, it) },
@@ -153,6 +181,8 @@ fun TransferDialog(transfer: TransferState, onCancel: () -> Unit) {
                 TransferKind.COMPRESS -> R.string.transfer_compressing
                 TransferKind.EXTRACT -> R.string.transfer_extracting
                 TransferKind.OPEN -> R.string.transfer_opening
+                TransferKind.ENCRYPT -> R.string.transfer_encrypting
+                TransferKind.DECRYPT -> R.string.transfer_decrypting
             }
             Text(stringResource(title))
         },

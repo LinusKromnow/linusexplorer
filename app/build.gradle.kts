@@ -38,6 +38,11 @@ android {
         compose = true
     }
 
+    testOptions {
+        // scrypt keeps its table off-heap; desktop JVMs cap that unless told otherwise.
+        unitTests.all { it.jvmArgs("-XX:MaxDirectMemorySize=2g") }
+    }
+
     // F-Droid rejects the encrypted dependency metadata blob AGP embeds by default.
     dependenciesInfo {
         includeInApk = false
@@ -61,6 +66,7 @@ dependencies {
     implementation(libs.zip4j)
     implementation(libs.commons.compress)
     implementation(libs.xz)
+    implementation(libs.bouncycastle)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material3.HorizontalDivider
@@ -25,7 +26,13 @@ import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.storage.Place
 
 @Composable
-fun PlacesDrawer(places: List<Place>, currentPath: String?, onPlaceClick: (Place) -> Unit) {
+fun PlacesDrawer(
+    places: List<Place>,
+    currentPath: String?,
+    vaultSelected: Boolean,
+    onPlaceClick: (Place) -> Unit,
+    onVaultClick: () -> Unit,
+) {
     ModalDrawerSheet {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             Text(
@@ -35,6 +42,13 @@ fun PlacesDrawer(places: List<Place>, currentPath: String?, onPlaceClick: (Place
             )
             SectionHeader(stringResource(R.string.drawer_storage))
             places.filter { it.kind != Place.Kind.FOLDER }.forEach { PlaceItem(it, currentPath, onPlaceClick) }
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.vault_name)) },
+                icon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                selected = vaultSelected,
+                onClick = onVaultClick,
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            )
 
             val folders = places.filter { it.kind == Place.Kind.FOLDER }
             if (folders.isNotEmpty()) {

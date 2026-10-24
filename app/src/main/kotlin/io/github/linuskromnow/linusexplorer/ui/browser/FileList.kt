@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.TextSnippet
@@ -143,6 +144,7 @@ private fun FileKind.icon(): ImageVector = when (this) {
     FileKind.DOCUMENT -> Icons.Default.Description
     FileKind.ARCHIVE -> Icons.Default.Archive
     FileKind.APK -> Icons.Default.Android
+    FileKind.ENCRYPTED -> Icons.Default.Lock
     FileKind.OTHER -> Icons.AutoMirrored.Filled.InsertDriveFile
 }
 

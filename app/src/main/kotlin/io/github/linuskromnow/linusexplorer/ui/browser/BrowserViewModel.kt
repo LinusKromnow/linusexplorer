@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.linuskromnow.linusexplorer.LinusExplorerApp
 import io.github.linuskromnow.linusexplorer.R
+import io.github.linuskromnow.linusexplorer.crypto.AgeNoMatchException
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
+import io.github.linuskromnow.linusexplorer.fs.FileEncryption
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.FileSorting
 import io.github.linuskromnow.linusexplorer.fs.FileTransfer
@@ -19,6 +21,7 @@ import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveWriter
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.storage.Place
 import io.github.linuskromnow.linusexplorer.storage.Places
 import kotlinx.coroutines.CancellationException
@@ -58,6 +61,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     /** What to retry once the user has typed the password asked for by a [BrowserDialog.Password]. */
     private var afterPassword: (() -> Unit)? = null
+
+    private val vault = container.vault
+    private var backgroundSince: Long? = null
 
     init {
         refreshPlaces()
@@ -170,6 +176,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         when {
             _state.value.inSelectionMode -> toggleSelection(entry)
             entry.isDirectory -> navigateTo(entry.path)
+            FileEncryption.isEncrypted(entry.name) -> showDialog(BrowserDialog.Decrypt(entry, open = true))
             ArchiveFormat.detect(entry.name) != null -> openArchive(entry)
             location.fsId == LocalFileSystem.ID -> _events.trySend(BrowserEvent.OpenFile(entry.path))
             else -> openViaCache(entry)
@@ -301,6 +308,119 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         afterPassword = retry
         val name = fileSystems.find(fsId)?.displayName ?: fsId
         showDialog(BrowserDialog.Password(fsId, name, e.wrongPassword))
+    }
+
+    // endregion
+
+    // region Encryption & vault
+
+    fun requestEncrypt() {
+        val files = _state.value.selectedEntries.filter { !it.isDirectory }
+        if (files.isNotEmpty() && !_state.value.readOnly) showDialog(BrowserDialog.Encrypt(files))
+    }
+
+    fun encrypt(files: List<FileEntry>, password: String, deleteOriginals: Boolean) {
+        val location = _state.value.location
+        _state.update { it.copy(dialog = null, selection = emptySet()) }
+        runTransfer(TransferKind.ENCRYPT, retry = {}) { onProgress ->
+            val count = FileEncryption.encrypt(fileSystems[location.fsId], files, password.toCharArray(), deleteOriginals, onProgress)
+            _events.trySend(BrowserEvent.Message(R.plurals.msg_encrypted, listOf(count), count))
+        }
+    }
+
+    fun requestDecrypt() {
+        val entry = _state.value.selectedEntries.singleOrNull()?.takeIf { FileEncryption.isEncrypted(it.name) } ?: return
+        if (!_state.value.readOnly) showDialog(BrowserDialog.Decrypt(entry, open = false))
+    }
+
+    fun decrypt(dialog: BrowserDialog.Decrypt, password: String, deleteEncrypted: Boolean) {
+        val location = _state.value.location
+        _state.update { it.copy(dialog = null, selection = emptySet()) }
+        val kind = if (dialog.open) TransferKind.OPEN else TransferKind.DECRYPT
+        runTransfer(kind, retry = {}) { onProgress ->
+            val fs = fileSystems[location.fsId]
+            try {
+                if (dialog.open) {
+                    val dir = File(cacheDir(OPEN_CACHE), UUID.randomUUID().toString()).apply { mkdirs() }
+                    val local = fileSystems[LocalFileSystem.ID]
+                    val path = FileEncryption.decrypt(fs, dialog.entry, local, dir.path, password.toCharArray(), onProgress)
+                    _events.trySend(BrowserEvent.OpenFile(path))
+                } else {
+                    val path = FileEncryption.decrypt(fs, dialog.entry, fs, location.path, password.toCharArray(), onProgress)
+                    if (deleteEncrypted) fs.delete(dialog.entry.path)
+                    _events.trySend(BrowserEvent.Message(R.string.msg_decrypted, listOf(VfsPaths.name(path))))
+                }
+            } catch (e: AgeNoMatchException) {
+                showDialog(dialog.copy(wrongPassword = true))
+            }
+        }
+    }
+
+    fun openVault() {
+        if (vault.isCreated) navigateTo(Location(VaultFileSystem.ID, VfsPaths.ROOT)) else showDialog(BrowserDialog.CreateVault)
+    }
+
+    fun createVault(password: String) {
+        _state.update { it.copy(dialog = null) }
+        viewModelScope.launch {
+            try {
+                vault.create(password.toCharArray())
+                navigateTo(Location(VaultFileSystem.ID, VfsPaths.ROOT))
+                _events.trySend(BrowserEvent.Message(R.string.msg_vault_created))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                sendError(e)
+            }
+        }
+    }
+
+    fun changeVaultPassword(password: String) = runFsAction { _, _ ->
+        vault.changePassword(password.toCharArray())
+        _events.trySend(BrowserEvent.Message(R.string.msg_vault_password_changed))
+    }
+
+    /** Locks the vault, wipes decrypted temp copies and leaves the vault if it is on screen. */
+    fun lockVault() {
+        if (!vault.isUnlocked) return
+        vault.lock()
+        viewModelScope.launch(Dispatchers.IO) { File(getApplication<Application>().cacheDir, OPEN_CACHE).deleteRecursively() }
+        if (_state.value.inVault) {
+            history.removeAll { it.fsId == VaultFileSystem.ID }
+            show(Location(LocalFileSystem.ID, Places.primaryStoragePath()))
+        }
+        _events.trySend(BrowserEvent.Message(R.string.msg_vault_locked))
+    }
+
+    fun moveSelectionToVault() {
+        val state = _state.value
+        if (!vault.isCreated) return showDialog(BrowserDialog.CreateVault)
+        val items = state.selectedEntries.map { Location(state.location.fsId, it.path) }
+        if (items.isEmpty() || state.readOnly || state.inVault) return
+        clearSelection()
+        moveToVault(items)
+    }
+
+    private fun moveToVault(items: List<Location>) {
+        runTransfer(TransferKind.MOVE, retry = { moveToVault(items) }) { onProgress -> moveToVault(items, onProgress) }
+    }
+
+    private suspend fun moveToVault(items: List<Location>, onProgress: (TransferProgress) -> Unit) {
+        vault.list(VfsPaths.ROOT) // asks for the password first if the vault is locked
+        val count = fileTransfer.run(items, Location(VaultFileSystem.ID, VfsPaths.ROOT), move = true, onProgress)
+        _events.trySend(BrowserEvent.Message(R.plurals.msg_moved_to_vault, listOf(count), count))
+    }
+
+    /** Called when the app goes to the background; see [onAppForeground]. */
+    fun onAppBackground() {
+        backgroundSince = System.currentTimeMillis()
+    }
+
+    /** Auto-locks the vault after the app spent [VAULT_AUTO_LOCK_MS] in the background. */
+    fun onAppForeground() {
+        val since = backgroundSince ?: return
+        backgroundSince = null
+        if (System.currentTimeMillis() - since >= VAULT_AUTO_LOCK_MS) lockVault()
     }
 
     // endregion
@@ -457,6 +577,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     companion object {
         private const val MAX_HISTORY = 100
+        private const val VAULT_AUTO_LOCK_MS = 60_000L
 
         /** Cache sub-folder for files handed to other apps; cleared on every app start. */
         const val OPEN_CACHE = "open"
