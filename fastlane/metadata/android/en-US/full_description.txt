@@ -5,6 +5,10 @@ LinusExplorer is a free and open-source file manager. No ads, no tracking, no pa
 <li>Browse internal storage, SD cards and the root file system</li>
 <li>Copy, move, rename, delete and share files and folders</li>
 <li>Multi-select, natural sorting, hidden files toggle</li>
+<li>Open, extract and create ZIP, 7z and tar archives, including AES-256 password-protected ZIPs</li>
+<li>Encrypt single files with the open age format</li>
+<li>Private vault: an encrypted, password-protected folder hidden from other apps</li>
+<li>App lock with PIN or fingerprint</li>
 <li>Material You design with light and dark themes</li>
 </ul>
 
@@ -12,5 +16,5 @@ LinusExplorer is a free and open-source file manager. No ads, no tracking, no pa
 <ul>
 <li>SFTP, FTP/FTPS, SMB and WebDAV</li>
 <li>Cloud storage: Google Drive, Dropbox, OneDrive, Nextcloud, S3 and more</li>
-<li>Archives, image thumbnails, search, bookmarks and tabs</li>
+<li>Image thumbnails, search, bookmarks and tabs</li>
 </ul>

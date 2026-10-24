@@ -18,6 +18,8 @@
 - [ ] Settings screen (theme, default folder, confirmations)
 - [x] Archives: browse and extract zip, 7z, tar(.gz/.bz2/.xz), gz/bz2/xz; create zip/7z/tar*; AES-256 zip passwords
 - [ ] RAR: only possible via the non-free UnRAR license (junrar); needs a licensing decision
+- [x] File encryption (.age, interoperable with age/rage), encrypted private vault, app lock (PIN + fingerprint)
+- [ ] Unlock the vault with fingerprint (Keystore-wrapped master key)
 - [ ] Recycle bin (optional)
 - [ ] Root access (optional, via libsu)
 

@@ -47,6 +47,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,14 +68,21 @@ import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.fs.SortField
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.security.Biometrics
+import io.github.linuskromnow.linusexplorer.security.SecureWindow
 import io.github.linuskromnow.linusexplorer.storage.StorageAccess
+import io.github.linuskromnow.linusexplorer.ui.lock.AppLockSettingsDialog
+import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
 import io.github.linuskromnow.linusexplorer.util.FileOpener
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
+fun BrowserScreen(viewModel: BrowserViewModel = viewModel(), lockViewModel: AppLockViewModel = viewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val lockState by lockViewModel.state.collectAsStateWithLifecycle()
+    var showAppLockSettings by rememberSaveable { mutableStateOf(false) }
+    SecureWindow(lockState.enabled || state.inVault)
     val context = LocalContext.current
     val resources = LocalResources.current
     val scope = rememberCoroutineScope()
@@ -141,6 +149,10 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
                     viewModel.openVault()
                     scope.launch { drawerState.close() }
                 },
+                onAppLockClick = {
+                    showAppLockSettings = true
+                    scope.launch { drawerState.close() }
+                },
             )
         },
     ) {
@@ -197,6 +209,17 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel()) {
     }
 
     state.dialog?.let { BrowserDialogHost(it, viewModel) }
+    if (showAppLockSettings) {
+        val close = { showAppLockSettings = false }
+        AppLockSettingsDialog(
+            state = lockState,
+            biometricAvailable = remember { Biometrics.isAvailable(context) },
+            onEnable = { pin, biometric -> lockViewModel.enable(pin, biometric).also { close() } },
+            onSetBiometric = lockViewModel::setBiometric,
+            onDisable = { lockViewModel.disable().also { close() } },
+            onDismiss = close,
+        )
+    }
     state.transfer?.let { TransferDialog(it, onCancel = viewModel::cancelTransfer) }
 }
 

@@ -107,6 +107,26 @@
     </plurals>
     <string name="msg_decrypted">Decrypted to “%1$s”</string>
 
+    <!-- App lock -->
+    <string name="app_lock_title">App lock</string>
+    <string name="app_lock_body">Choose a PIN of at least 4 digits. LinusExplorer asks for it when it starts and after 30 seconds in the background.</string>
+    <string name="app_lock_on">App lock is on.</string>
+    <string name="app_lock_biometric">Unlock with fingerprint</string>
+    <string name="app_lock_change_pin">Change PIN</string>
+    <string name="app_lock_turn_on">Turn on</string>
+    <string name="app_lock_turn_off">Turn off</string>
+    <string name="field_pin">PIN</string>
+    <string name="field_pin_repeat">Repeat PIN</string>
+    <string name="action_close">Close</string>
+    <string name="lock_title">LinusExplorer is locked</string>
+    <string name="lock_enter_pin">Enter your PIN</string>
+    <string name="lock_wrong_pin">Wrong PIN</string>
+    <string name="lock_wait">Too many attempts. Try again in %1$d s</string>
+    <string name="lock_delete_digit">Delete digit</string>
+    <string name="lock_use_biometric">Use fingerprint</string>
+    <string name="lock_biometric_title">Unlock LinusExplorer</string>
+    <string name="lock_biometric_negative">Use PIN</string>
+
     <!-- Vault -->
     <string name="vault_name">Private vault</string>
     <string name="vault_create_title">Set up private vault</string>

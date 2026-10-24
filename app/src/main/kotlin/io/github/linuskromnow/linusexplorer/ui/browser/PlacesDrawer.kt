@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Pin
 import androidx.compose.material.icons.filled.SdCard
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -32,6 +33,7 @@ fun PlacesDrawer(
     vaultSelected: Boolean,
     onPlaceClick: (Place) -> Unit,
     onVaultClick: () -> Unit,
+    onAppLockClick: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -56,6 +58,15 @@ fun PlacesDrawer(
                 SectionHeader(stringResource(R.string.drawer_folders))
                 folders.forEach { PlaceItem(it, currentPath, onPlaceClick) }
             }
+
+            HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.app_lock_title)) },
+                icon = { Icon(Icons.Default.Pin, contentDescription = null) },
+                selected = false,
+                onClick = onAppLockClick,
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            )
         }
     }
 }

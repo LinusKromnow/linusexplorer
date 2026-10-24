@@ -67,6 +67,8 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.bouncycastle)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment) // FragmentActivity for BiometricPrompt; newer than biometric's own
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

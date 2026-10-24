@@ -46,6 +46,7 @@ fun PasswordField(
     modifier: Modifier = Modifier,
     isError: Boolean = false,
     supportingText: String? = null,
+    keyboardType: KeyboardType = KeyboardType.Password,
     onDone: () -> Unit = {},
 ) {
     var visible by remember { mutableStateOf(false) }
@@ -57,7 +58,7 @@ fun PasswordField(
         isError = isError,
         supportingText = supportingText?.let { { Text(it) } },
         visualTransformation = if (visible) VisualTransformation.None else PasswordVisualTransformation(),
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { onDone() }),
         trailingIcon = {
             IconButton(onClick = { visible = !visible }) {
