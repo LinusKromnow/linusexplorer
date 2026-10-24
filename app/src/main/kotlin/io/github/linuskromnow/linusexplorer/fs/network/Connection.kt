@@ -16,12 +16,19 @@ enum class Protocol(val defaultPort: Int, val label: String) {
 
     /** Windows shares, Samba, most NAS boxes (SMB 2/3). */
     SMB(445, "SMB"),
+
+    /** WebDAV over HTTPS: Nextcloud, ownCloud, many NAS boxes and hosters. */
+    WEBDAV(443, "WebDAV"),
+
+    /** WebDAV over plain HTTP, for local networks only. */
+    WEBDAV_HTTP(80, "WebDAV (HTTP)"),
     ;
 
     /** Whether the server can be used without a user name (FTP "anonymous", SMB guest). */
     val allowsAnonymous: Boolean get() = this != SFTP
     val supportsKeys: Boolean get() = this == SFTP
     val needsShare: Boolean get() = this == SMB
+    val isWebDav: Boolean get() = this == WEBDAV || this == WEBDAV_HTTP
 }
 
 /** A saved remote storage. Secrets live here too; the whole list is stored encrypted (see [ConnectionStore]). */
@@ -39,7 +46,7 @@ data class Connection(
     val keyPassphrase: String? = null,
     /** Folder to open after connecting. */
     val path: String = "/",
-    /** SMB share name, e.g. "Public". */
+    /** SMB share name, e.g. "Public"; for WebDAV the server path, e.g. "/remote.php/dav/files/linus". */
     val share: String = "",
 ) {
     /** The [io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem] id this connection is registered under. */
