@@ -223,6 +223,10 @@
     <string name="connection_path">Start folder</string>
     <string name="connection_share">Share name</string>
     <string name="connection_server_path">Server path (e.g. /remote.php/dav/files/USER for Nextcloud)</string>
+    <string name="connection_access_key">Access key ID</string>
+    <string name="connection_secret_key">Secret access key</string>
+    <string name="connection_bucket">Bucket</string>
+    <string name="connection_region">Region (default: %1$s)</string>
     <string name="trust_host_title">Trust this server?</string>
     <string name="trust_host_body">First connection to %1$s. Check that this fingerprint matches the server before trusting it:</string>
     <string name="trust_host_accept">Trust</string>

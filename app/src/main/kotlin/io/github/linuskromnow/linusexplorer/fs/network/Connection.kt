@@ -22,13 +22,21 @@ enum class Protocol(val defaultPort: Int, val label: String) {
 
     /** WebDAV over plain HTTP, for local networks only. */
     WEBDAV_HTTP(80, "WebDAV (HTTP)"),
+
+    /** S3-compatible object storage: AWS, Backblaze B2, Cloudflare R2, Wasabi, MinIO... */
+    S3(443, "S3"),
+
+    /** S3 over plain HTTP, e.g. a MinIO server on the local network. */
+    S3_HTTP(9000, "S3 (HTTP)"),
     ;
 
     /** Whether the server can be used without a user name (FTP "anonymous", SMB guest). */
-    val allowsAnonymous: Boolean get() = this != SFTP
+    val allowsAnonymous: Boolean get() = this != SFTP && !isS3
     val supportsKeys: Boolean get() = this == SFTP
-    val needsShare: Boolean get() = this == SMB
+    /** SMB share or S3 bucket. */
+    val needsShare: Boolean get() = this == SMB || isS3
     val isWebDav: Boolean get() = this == WEBDAV || this == WEBDAV_HTTP
+    val isS3: Boolean get() = this == S3 || this == S3_HTTP
 }
 
 /** A saved remote storage. Secrets live here too; the whole list is stored encrypted (see [ConnectionStore]). */
@@ -46,8 +54,10 @@ data class Connection(
     val keyPassphrase: String? = null,
     /** Folder to open after connecting. */
     val path: String = "/",
-    /** SMB share name, e.g. "Public"; for WebDAV the server path, e.g. "/remote.php/dav/files/linus". */
+    /** SMB share name, e.g. "Public"; WebDAV server path, e.g. "/remote.php/dav/files/linus"; S3 bucket. */
     val share: String = "",
+    /** S3 signing region, e.g. "eu-central-1" ("auto" for Cloudflare R2). */
+    val region: String = "",
 ) {
     /** The [io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem] id this connection is registered under. */
     val fsId: String get() = fsIdFor(id)
@@ -64,7 +74,7 @@ data class Connection(
 /** Binary format for the saved connections (kept free of Android APIs so it is unit-testable). */
 internal object ConnectionCodec {
     private const val MAGIC = 0x4C45434E // "LECN"
-    private const val VERSION = 2
+    private const val VERSION = 3
 
     fun encode(connections: List<Connection>): ByteArray {
         val bytes = ByteArrayOutputStream()
@@ -84,6 +94,7 @@ internal object ConnectionCodec {
                 writeNullable(out, c.keyPassphrase)
                 out.writeUTF(c.path)
                 out.writeUTF(c.share)
+                out.writeUTF(c.region)
             }
         }
         return bytes.toByteArray()
@@ -106,6 +117,7 @@ internal object ConnectionCodec {
                 keyPassphrase = readNullable(input),
                 path = input.readUTF(),
                 share = if (version >= 2) input.readUTF() else "",
+                region = if (version >= 3) input.readUTF() else "",
             )
         }
     }
