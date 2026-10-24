@@ -65,5 +65,8 @@ sealed interface BrowserEvent {
     }
 
     data class OpenFile(val path: String) : BrowserEvent
+
+    /** Open the built-in text editor on [location]. */
+    data class EditFile(val location: Location) : BrowserEvent
     data class Share(val paths: List<String>) : BrowserEvent
 }

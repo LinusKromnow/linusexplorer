@@ -6,9 +6,11 @@ import androidx.lifecycle.viewModelScope
 import io.github.linuskromnow.linusexplorer.LinusExplorerApp
 import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.crypto.AgeNoMatchException
+import io.github.linuskromnow.linusexplorer.editor.TextFiles
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEncryption
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
+import io.github.linuskromnow.linusexplorer.fs.FileKind
 import io.github.linuskromnow.linusexplorer.fs.FileSorting
 import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.Location
@@ -194,9 +196,46 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             entry.name.endsWith(VaultFileSystem.BACKUP_EXTENSION) && location.fsId == LocalFileSystem.ID ->
                 showDialog(BrowserDialog.RestoreVault(entry))
             ArchiveFormat.detect(entry.name) != null -> openArchive(entry)
-            location.fsId == LocalFileSystem.ID -> _events.trySend(BrowserEvent.OpenFile(entry.path))
-            else -> openViaCache(entry)
+            FileKind.of(entry) == FileKind.TEXT -> editFile(entry)
+            mayBeText(entry) -> editIfText(entry)
+            else -> openExternally(entry)
         }
+    }
+
+    /** Extensions that don't say much (".ts" is mostly video): look at the content to decide. */
+    private fun mayBeText(entry: FileEntry) = entry.extension.let { it.isEmpty() || it == "ts" }
+
+    private fun editFile(entry: FileEntry) {
+        _events.trySend(BrowserEvent.EditFile(Location(_state.value.location.fsId, entry.path)))
+    }
+
+    private fun editIfText(entry: FileEntry) {
+        val location = _state.value.location
+        viewModelScope.launch {
+            val isText = try {
+                TextFiles.looksLikeText(fileSystems[location.fsId], entry.path)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false // the external path below reports unreadable files and asks for passwords
+            }
+            if (isText) editFile(entry) else openExternally(entry)
+        }
+    }
+
+    private fun openExternally(entry: FileEntry) {
+        if (_state.value.location.fsId == LocalFileSystem.ID) {
+            _events.trySend(BrowserEvent.OpenFile(entry.path))
+        } else {
+            openViaCache(entry)
+        }
+    }
+
+    /** "Edit" for the single selected file, whatever its extension. */
+    fun editSelection() {
+        val entry = _state.value.selectedEntries.singleOrNull()?.takeIf { !it.isDirectory } ?: return
+        clearSelection()
+        editFile(entry)
     }
 
     fun onEntryLongClick(entry: FileEntry) = toggleSelection(entry)
@@ -219,11 +258,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun openSelectionExternally() {
         val entry = _state.value.selectedEntries.singleOrNull()?.takeIf { !it.isDirectory } ?: return
         clearSelection()
-        if (_state.value.location.fsId == LocalFileSystem.ID) {
-            _events.trySend(BrowserEvent.OpenFile(entry.path))
-        } else {
-            openViaCache(entry)
-        }
+        openExternally(entry)
     }
 
     // endregion

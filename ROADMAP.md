@@ -20,6 +20,7 @@
 - [ ] RAR: only possible via the non-free UnRAR license (junrar); needs a licensing decision
 - [x] File encryption (.age, interoperable with age/rage), encrypted private vault, app lock (PIN + fingerprint)
 - [x] Unlock the vault with fingerprint (Keystore-wrapped master key); vault backup & restore (.lxvault)
+- [x] Built-in text editor (line numbers, find/replace, undo/redo, encoding and line-ending aware, works in the vault)
 - [ ] Recycle bin (optional)
 - [ ] Root access (optional, via libsu)
 

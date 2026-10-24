@@ -13,7 +13,7 @@ enum class FileKind {
             add(IMAGE, "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "avif", "svg", "tif", "tiff", "dng", "raw")
             add(VIDEO, "mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", "ts", "wmv", "flv")
             add(AUDIO, "mp3", "flac", "ogg", "opus", "m4a", "aac", "wav", "wma", "amr", "mid", "midi")
-            add(TEXT, "txt", "md", "log", "csv", "json", "xml", "yml", "yaml", "ini", "conf", "cfg", "html", "htm", "css", "js", "kt", "java", "py", "sh", "c", "h", "cpp", "rs", "go")
+            add(TEXT, "txt", "md", "log", "csv", "json", "xml", "yml", "yaml", "ini", "conf", "cfg", "html", "htm", "css", "js", "kt", "java", "py", "sh", "c", "h", "cpp", "hpp", "rs", "go", "kts", "gradle", "properties", "toml", "tsv", "sql", "bat")
             add(PDF, "pdf")
             add(DOCUMENT, "doc", "docx", "odt", "rtf", "xls", "xlsx", "ods", "ppt", "pptx", "odp", "epub")
             add(ARCHIVE, "zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz", "zst", "lz4", "iso")

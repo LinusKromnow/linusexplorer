@@ -86,7 +86,11 @@ import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BrowserScreen(viewModel: BrowserViewModel = viewModel(), lockViewModel: AppLockViewModel = viewModel()) {
+fun BrowserScreen(
+    onEditFile: (Location) -> Unit,
+    viewModel: BrowserViewModel = viewModel(),
+    lockViewModel: AppLockViewModel = viewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val lockState by lockViewModel.state.collectAsStateWithLifecycle()
     var showAppLockSettings by rememberSaveable { mutableStateOf(false) }
@@ -134,6 +138,7 @@ fun BrowserScreen(viewModel: BrowserViewModel = viewModel(), lockViewModel: AppL
                     launch { snackbarHostState.showSnackbar(resources.getString(R.string.msg_no_app_to_open)) }
                 }
                 is BrowserEvent.Share -> FileOpener.share(context, event.paths)
+                is BrowserEvent.EditFile -> onEditFile(event.location)
             }
         }
     }
@@ -419,6 +424,7 @@ private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel) 
                         add(MenuAction(R.string.action_extract, action = viewModel::extractSelection))
                     }
                     if (single != null && !single.isDirectory) {
+                        add(MenuAction(R.string.action_edit, action = viewModel::editSelection))
                         add(MenuAction(R.string.action_open_with, action = viewModel::openSelectionExternally))
                     }
                     if (isLocal) {

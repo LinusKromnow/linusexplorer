@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import io.github.linuskromnow.linusexplorer.editor.EditorPrefs
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.SortField
 import kotlinx.coroutines.flow.Flow
@@ -34,6 +35,8 @@ class UserPreferences(context: Context) {
 
     val appLock: Flow<AppLockPrefs> = store.data.map { it.toAppLockPrefs() }
 
+    val editor: Flow<EditorPrefs> = store.data.map { it.toEditorPrefs() }
+
     suspend fun updateBrowser(transform: (BrowserPrefs) -> BrowserPrefs) {
         store.edit { prefs ->
             val updated = transform(prefs.toBrowserPrefs())
@@ -41,6 +44,14 @@ class UserPreferences(context: Context) {
             prefs[DESCENDING] = updated.descending
             prefs[FOLDERS_FIRST] = updated.foldersFirst
             prefs[SHOW_HIDDEN] = updated.showHidden
+        }
+    }
+
+    suspend fun updateEditor(transform: (EditorPrefs) -> EditorPrefs) {
+        store.edit { prefs ->
+            val updated = transform(prefs.toEditorPrefs())
+            prefs[EDITOR_WRAP] = updated.wordWrap
+            prefs[EDITOR_FONT_SIZE] = updated.fontSizeSp
         }
     }
 
@@ -64,6 +75,15 @@ class UserPreferences(context: Context) {
         )
     }
 
+    private fun Preferences.toEditorPrefs(): EditorPrefs {
+        val defaults = EditorPrefs()
+        return EditorPrefs(
+            wordWrap = this[EDITOR_WRAP] ?: defaults.wordWrap,
+            fontSizeSp = (this[EDITOR_FONT_SIZE] ?: defaults.fontSizeSp)
+                .coerceIn(EditorPrefs.MIN_FONT_SIZE, EditorPrefs.MAX_FONT_SIZE),
+        )
+    }
+
     private fun Preferences.toAppLockPrefs() = AppLockPrefs(
         pinHash = this[PIN_HASH],
         biometric = this[BIOMETRIC] ?: false,
@@ -76,6 +96,8 @@ class UserPreferences(context: Context) {
         val DESCENDING = booleanPreferencesKey("sort_descending")
         val FOLDERS_FIRST = booleanPreferencesKey("folders_first")
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
+        val EDITOR_WRAP = booleanPreferencesKey("editor_word_wrap")
+        val EDITOR_FONT_SIZE = intPreferencesKey("editor_font_size")
         val PIN_HASH = stringPreferencesKey("app_lock_pin_hash")
         val BIOMETRIC = booleanPreferencesKey("app_lock_biometric")
         val FAILURES = intPreferencesKey("app_lock_failures")
