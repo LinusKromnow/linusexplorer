@@ -6,3 +6,11 @@
 -keep class org.bouncycastle.jcajce.provider.** { *; }
 -keep class org.bouncycastle.jce.provider.** { *; }
 -dontwarn javax.naming.**
+
+# smbj delivers protocol events through mbassador, which finds @Handler methods by reflection.
+-keep class net.engio.mbassy.** { *; }
+-keepclassmembers class * {
+    @net.engio.mbassy.listener.Handler <methods>;
+}
+-dontwarn org.ietf.jgss.**
+-dontwarn javax.el.**

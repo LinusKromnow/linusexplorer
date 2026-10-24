@@ -56,6 +56,7 @@ fun ConnectionDialog(
     var privateKey by rememberSaveable { mutableStateOf(existing?.privateKey) }
     var keyPassphrase by rememberSaveable { mutableStateOf(existing?.keyPassphrase.orEmpty()) }
     var path by rememberSaveable { mutableStateOf(existing?.path ?: VfsPaths.ROOT) }
+    var share by rememberSaveable { mutableStateOf(existing?.share.orEmpty()) }
     var keyError by rememberSaveable { mutableStateOf(false) }
 
     val keyPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -68,7 +69,8 @@ fun ConnectionDialog(
     val portNumber = port.toIntOrNull()?.takeIf { it in 1..65535 }
     val keyAuth = useKey && protocol.supportsKeys
     val valid = host.isNotBlank() && portNumber != null &&
-        (username.isNotBlank() || protocol.allowsAnonymous) && (!keyAuth || privateKey != null)
+        (username.isNotBlank() || protocol.allowsAnonymous) && (!keyAuth || privateKey != null) &&
+        (!protocol.needsShare || share.isNotBlank())
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -118,6 +120,7 @@ fun ConnectionDialog(
                     }
                     PasswordField(keyPassphrase, { keyPassphrase = it }, stringResource(R.string.connection_key_passphrase))
                 }
+                if (protocol.needsShare) Field(share, { share = it.trim().trim('/', '\\') }, stringResource(R.string.connection_share))
                 Field(path, { path = it.trim() }, stringResource(R.string.connection_path))
                 if (existing != null) {
                     TextButton(onClick = { onDelete(existing) }) {
@@ -142,6 +145,7 @@ fun ConnectionDialog(
                             privateKey = if (keyAuth) privateKey else null,
                             keyPassphrase = if (keyAuth) keyPassphrase.ifEmpty { null } else null,
                             path = VfsPaths.normalize(path.ifBlank { VfsPaths.ROOT }),
+                            share = if (protocol.needsShare) share else "",
                         ),
                     )
                 },

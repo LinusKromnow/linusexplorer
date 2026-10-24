@@ -15,6 +15,7 @@ bouncycastle = "1.86"
 sshj = "0.41.1"
 minaSshd = "2.20.0"
 commonsNet = "3.13.0"
+smbj = "0.15.0"
 ftpServer = "1.2.1"
 biometric = "1.1.0"
 fragment = "1.9.1"
@@ -41,6 +42,7 @@ bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.re
 bouncycastle-pkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
 sshj = { group = "com.hierynomus", name = "sshj", version.ref = "sshj" }
 commons-net = { group = "commons-net", name = "commons-net", version.ref = "commonsNet" }
+smbj = { group = "com.hierynomus", name = "smbj", version.ref = "smbj" }
 ftpserver-core = { group = "org.apache.ftpserver", name = "ftpserver-core", version.ref = "ftpServer" }
 mina-sshd-core = { group = "org.apache.sshd", name = "sshd-core", version.ref = "minaSshd" }
 mina-sshd-sftp = { group = "org.apache.sshd", name = "sshd-sftp", version.ref = "minaSshd" }
