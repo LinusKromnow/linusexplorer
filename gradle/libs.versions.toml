@@ -12,6 +12,8 @@ zip4j = "2.11.6"
 commonsCompress = "1.28.0"
 xz = "1.12"
 bouncycastle = "1.86"
+sshj = "0.41.1"
+minaSshd = "2.20.0"
 biometric = "1.1.0"
 fragment = "1.9.1"
 coil = "3.6.3"
@@ -34,6 +36,10 @@ zip4j = { group = "net.lingala.zip4j", name = "zip4j", version.ref = "zip4j" }
 commons-compress = { group = "org.apache.commons", name = "commons-compress", version.ref = "commonsCompress" }
 xz = { group = "org.tukaani", name = "xz", version.ref = "xz" }
 bouncycastle = { group = "org.bouncycastle", name = "bcprov-jdk18on", version.ref = "bouncycastle" }
+bouncycastle-pkix = { group = "org.bouncycastle", name = "bcpkix-jdk18on", version.ref = "bouncycastle" }
+sshj = { group = "com.hierynomus", name = "sshj", version.ref = "sshj" }
+mina-sshd-core = { group = "org.apache.sshd", name = "sshd-core", version.ref = "minaSshd" }
+mina-sshd-sftp = { group = "org.apache.sshd", name = "sshd-sftp", version.ref = "minaSshd" }
 androidx-biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 androidx-fragment = { group = "androidx.fragment", name = "fragment", version.ref = "fragment" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }

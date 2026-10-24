@@ -3,6 +3,7 @@ package io.github.linuskromnow.linusexplorer.thumbnails
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.FileKind
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.fs.network.Connection
 
 enum class ThumbnailType { IMAGE, VIDEO, APK }
 
@@ -37,6 +38,7 @@ object Thumbnails {
      */
     fun sourceFor(fsId: String, entry: FileEntry): ThumbnailSource? {
         if (entry.isDirectory || entry.size <= 0) return null
+        if (Connection.connectionIdOf(fsId) != null) return null // remote: would download every image
         val local = fsId == LocalFileSystem.ID
         val type = when {
             entry.extension in imageExtensions -> {

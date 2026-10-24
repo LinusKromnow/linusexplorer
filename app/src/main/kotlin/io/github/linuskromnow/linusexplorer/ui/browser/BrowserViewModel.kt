@@ -23,6 +23,8 @@ import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveWriter
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.fs.network.Connection
+import io.github.linuskromnow.linusexplorer.fs.network.UntrustedHostKeyException
 import io.github.linuskromnow.linusexplorer.fs.properties.Checksums
 import io.github.linuskromnow.linusexplorer.fs.properties.FolderSizer
 import io.github.linuskromnow.linusexplorer.fs.search.FileSearch
@@ -81,6 +83,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private var afterPassword: (() -> Unit)? = null
 
     private val vault = container.vault
+    private val network = container.network
+
+    /** What to retry once the user trusted a server key in a [BrowserDialog.TrustHost]. */
+    private var afterTrust: (() -> Unit)? = null
 
     /** Needed by the UI to turn fingerprint unlock on (it wraps the key behind a biometric prompt). */
     val vaultBiometrics = container.vaultBiometrics
@@ -89,6 +95,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     init {
         refreshPlaces()
         onVaultBiometricChanged()
+        viewModelScope.launch {
+            network.store.connections.collect { list -> _state.update { it.copy(connections = list) } }
+        }
         viewModelScope.launch {
             preferences.browser.collect { prefs ->
                 _state.update { it.copy(prefs = prefs, entries = FileSorting.sort(unsortedEntries, prefs)) }
@@ -177,6 +186,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 unsortedEntries = emptyList()
                 _state.update { it.copy(entries = emptyList(), isLoading = false, error = e.message ?: e.toString()) }
                 if (e is PasswordRequiredFsException) askForPassword(e, retry = ::load)
+                if (e is UntrustedHostKeyException) askToTrustHost(e, retry = ::load)
             }
         }
     }
@@ -326,6 +336,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             } catch (e: PasswordRequiredFsException) {
                 updateSearch(generation) { it.copy(running = false) }
                 askForPassword(e, retry = { launchSearch(debounce = false) })
+            } catch (e: UntrustedHostKeyException) {
+                updateSearch(generation) { it.copy(running = false) }
+                askToTrustHost(e, retry = { launchSearch(debounce = false) })
             } catch (e: Exception) {
                 updateSearch(generation) { it.copy(running = false, error = e.message ?: e.toString()) }
             }
@@ -532,6 +545,45 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
+    // region Network connections
+
+    fun openConnection(connection: Connection) {
+        val fs = network.open(connection)
+        navigateTo(Location(fs.id, connection.path))
+    }
+
+    fun saveConnection(connection: Connection) {
+        _state.update { it.copy(dialog = null) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { network.save(connection) }
+            if (_state.value.location.fsId == connection.fsId) refresh() // reconnect with the new settings
+        }
+    }
+
+    fun deleteConnection(connection: Connection) {
+        _state.update { it.copy(dialog = null) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { network.remove(connection) }
+            history.removeAll { it.fsId == connection.fsId }
+            if (_state.value.location.fsId == connection.fsId) show(Location(LocalFileSystem.ID, Places.primaryStoragePath()))
+        }
+    }
+
+    private fun askToTrustHost(e: UntrustedHostKeyException, retry: () -> Unit) {
+        afterTrust = retry
+        showDialog(BrowserDialog.TrustHost(e))
+    }
+
+    fun trustHost(dialog: BrowserDialog.TrustHost) {
+        _state.update { it.copy(dialog = null) }
+        val e = dialog.error
+        network.knownHosts.trust(e.host, e.port, e.key)
+        afterTrust?.invoke()
+        afterTrust = null
+    }
+
+    // endregion
+
     fun openVault() {
         if (vault.isCreated) navigateTo(Location(VaultFileSystem.ID, VfsPaths.ROOT)) else showDialog(BrowserDialog.CreateVault)
     }
@@ -685,6 +737,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 throw e
             } catch (e: PasswordRequiredFsException) {
                 askForPassword(e, retry)
+            } catch (e: UntrustedHostKeyException) {
+                askToTrustHost(e, retry)
             } catch (e: Exception) {
                 sendError(e)
             } finally {

@@ -6,6 +6,9 @@ import java.util.concurrent.ConcurrentHashMap
 class FileSystemRegistry {
     private val systems = ConcurrentHashMap<String, VirtualFileSystem>()
 
+    /** Creates file systems that aren't registered yet on demand, e.g. saved network connections. */
+    var resolver: ((String) -> VirtualFileSystem?)? = null
+
     fun register(fs: VirtualFileSystem) {
         systems[fs.id] = fs
     }
@@ -17,5 +20,7 @@ class FileSystemRegistry {
     fun find(id: String): VirtualFileSystem? = systems[id]
 
     operator fun get(id: String): VirtualFileSystem =
-        systems[id] ?: throw FsException("Storage “$id” is not connected")
+        systems[id]
+            ?: resolver?.invoke(id)?.let { systems.putIfAbsent(id, it) ?: it }
+            ?: throw FsException("Storage “$id” is not connected")
 }

@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
 import io.github.linuskromnow.linusexplorer.R
+import io.github.linuskromnow.linusexplorer.ui.connections.ConnectionDialog
+import io.github.linuskromnow.linusexplorer.ui.connections.TrustHostDialog
 import io.github.linuskromnow.linusexplorer.fs.ConflictResolution
 import io.github.linuskromnow.linusexplorer.tasks.ConflictRequest
 import io.github.linuskromnow.linusexplorer.tasks.TransferState
@@ -148,6 +150,20 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
             )
         }
         is BrowserDialog.Properties -> PropertiesDialog(viewModel)
+        is BrowserDialog.EditConnection -> ConnectionDialog(
+            existing = dialog.connection,
+            onSave = viewModel::saveConnection,
+            onDelete = viewModel::deleteConnection,
+            onDismiss = viewModel::dismissDialog,
+        )
+        is BrowserDialog.TrustHost -> TrustHostDialog(
+            host = dialog.error.host,
+            port = dialog.error.port,
+            fingerprint = dialog.error.fingerprint,
+            changed = dialog.error.changed,
+            onTrust = { viewModel.trustHost(dialog) },
+            onDismiss = viewModel::dismissDialog,
+        )
         is BrowserDialog.RestoreVault -> AlertDialog(
             onDismissRequest = viewModel::dismissDialog,
             title = { Text(stringResource(R.string.vault_restore_title)) },

@@ -43,6 +43,14 @@ android {
         unitTests.all { it.jvmArgs("-XX:MaxDirectMemorySize=2g") }
     }
 
+    packaging {
+        resources {
+            // bcprov, bcpkix and bcutil each ship the same license files; keep one copy.
+            pickFirsts += setOf("META-INF/LICENSE.md", "META-INF/NOTICE.md")
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+        }
+    }
+
     // F-Droid rejects the encrypted dependency metadata blob AGP embeds by default.
     dependenciesInfo {
         includeInApk = false
@@ -67,6 +75,8 @@ dependencies {
     implementation(libs.commons.compress)
     implementation(libs.xz)
     implementation(libs.bouncycastle)
+    implementation(libs.bouncycastle.pkix) // sshj needs it; pinned to match bcprov
+    implementation(libs.sshj)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment) // FragmentActivity for BiometricPrompt; newer than biometric's own
     // Thumbnails. Deliberately no coil-network-*: the app has no network access.
@@ -82,4 +92,6 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mina.sshd.core) // in-process SFTP server for network tests
+    testImplementation(libs.mina.sshd.sftp)
 }

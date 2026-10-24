@@ -4,6 +4,8 @@ import android.content.res.Resources
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.Location
+import io.github.linuskromnow.linusexplorer.fs.network.Connection
+import io.github.linuskromnow.linusexplorer.fs.network.UntrustedHostKeyException
 import io.github.linuskromnow.linusexplorer.fs.search.SearchHit
 import io.github.linuskromnow.linusexplorer.tasks.TransferState
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
@@ -29,6 +31,8 @@ data class BrowserUiState(
     val vaultBiometric: Boolean = false,
     /** Non-null while the search bar is open; its results replace the folder listing. */
     val search: SearchState? = null,
+    /** Saved network connections, shown in the drawer. */
+    val connections: List<Connection> = emptyList(),
 ) {
     val inSelectionMode: Boolean get() = selection.isNotEmpty()
     val inVault: Boolean get() = location.fsId == VaultFileSystem.ID
@@ -70,6 +74,10 @@ sealed interface BrowserDialog {
     data object CreateVault : BrowserDialog
     data object ChangeVaultPassword : BrowserDialog
     data class RestoreVault(val entry: FileEntry) : BrowserDialog
+
+    /** Add ([connection] = null) or edit a network connection. */
+    data class EditConnection(val connection: Connection?) : BrowserDialog
+    class TrustHost(val error: UntrustedHostKeyException) : BrowserDialog
 }
 
 sealed interface BrowserEvent {

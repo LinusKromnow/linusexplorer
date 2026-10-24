@@ -6,7 +6,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.text.style.TextOverflow
+import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Settings
@@ -33,6 +39,10 @@ fun PlacesDrawer(
     vaultSelected: Boolean,
     onPlaceClick: (Place) -> Unit,
     onVaultClick: () -> Unit,
+    connections: List<Connection>,
+    currentFsId: String,
+    onConnectionClick: (Connection) -> Unit,
+    onEditConnection: (Connection?) -> Unit,
     onSettingsClick: () -> Unit,
 ) {
     ModalDrawerSheet {
@@ -49,6 +59,30 @@ fun PlacesDrawer(
                 icon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 selected = vaultSelected,
                 onClick = onVaultClick,
+                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+            )
+
+            HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
+            SectionHeader(stringResource(R.string.drawer_network))
+            connections.forEach { connection ->
+                NavigationDrawerItem(
+                    label = { Text(connection.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    icon = { Icon(Icons.Default.Dns, contentDescription = null) },
+                    badge = {
+                        IconButton(onClick = { onEditConnection(connection) }) {
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.connection_edit))
+                        }
+                    },
+                    selected = currentFsId == connection.fsId,
+                    onClick = { onConnectionClick(connection) },
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                )
+            }
+            NavigationDrawerItem(
+                label = { Text(stringResource(R.string.connection_add)) },
+                icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                selected = false,
+                onClick = { onEditConnection(null) },
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
             )
 
