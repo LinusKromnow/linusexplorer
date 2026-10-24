@@ -69,6 +69,9 @@ dependencies {
     implementation(libs.bouncycastle)
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.fragment) // FragmentActivity for BiometricPrompt; newer than biometric's own
+    // Thumbnails. Deliberately no coil-network-*: the app has no network access.
+    implementation(libs.coil.compose)
+    implementation(libs.coil.video)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

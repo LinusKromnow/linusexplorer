@@ -51,6 +51,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val fileSystems = container.fileSystems
     private val fileTransfer = container.fileTransfer
     private val preferences = container.preferences
+    val imageLoader = container.imageLoader
 
     private val _state = MutableStateFlow(
         BrowserUiState(location = Location(LocalFileSystem.ID, Places.primaryStoragePath())),
@@ -481,6 +482,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun lockVault() {
         if (!vault.isUnlocked) return
         vault.lock()
+        imageLoader.memoryCache?.clear() // may hold decrypted vault thumbnails
         viewModelScope.launch(Dispatchers.IO) { File(getApplication<Application>().cacheDir, OPEN_CACHE).deleteRecursively() }
         if (_state.value.inVault) {
             history.removeAll { it.fsId == VaultFileSystem.ID }

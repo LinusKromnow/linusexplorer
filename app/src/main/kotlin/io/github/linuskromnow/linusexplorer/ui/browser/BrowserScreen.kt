@@ -324,6 +324,9 @@ private fun BrowserTopBar(
                 CheckableMenuItem(stringResource(R.string.action_show_hidden), prefs.showHidden) {
                     viewModel.updatePrefs { it.copy(showHidden = !it.showHidden) }
                 }
+                CheckableMenuItem(stringResource(R.string.action_show_thumbnails), prefs.showThumbnails) {
+                    viewModel.updatePrefs { it.copy(showThumbnails = !it.showThumbnails) }
+                }
                 if (!readOnly) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_new_folder)) },

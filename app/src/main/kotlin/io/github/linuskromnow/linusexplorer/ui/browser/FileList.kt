@@ -2,6 +2,7 @@ package io.github.linuskromnow.linusexplorer.ui.browser
 
 import android.text.format.DateUtils
 import android.text.format.Formatter
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -46,17 +47,31 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil3.ImageLoader
+import coil3.compose.AsyncImage
+import coil3.compose.AsyncImagePainter
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
+import coil3.size.Precision
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.FileKind
+import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailSource
+import io.github.linuskromnow.linusexplorer.thumbnails.Thumbnails
 
 @Composable
 fun FileList(state: BrowserUiState, viewModel: BrowserViewModel) {
@@ -79,6 +94,8 @@ fun FileList(state: BrowserUiState, viewModel: BrowserViewModel) {
             FileRow(
                 entry = entry,
                 selected = entry.path in state.selection,
+                thumbnail = if (state.prefs.showThumbnails) Thumbnails.sourceFor(location.fsId, entry) else null,
+                imageLoader = viewModel.imageLoader,
                 onClick = { viewModel.onEntryClick(entry) },
                 onLongClick = { viewModel.onEntryLongClick(entry) },
             )
@@ -87,7 +104,14 @@ fun FileList(state: BrowserUiState, viewModel: BrowserViewModel) {
 }
 
 @Composable
-private fun FileRow(entry: FileEntry, selected: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
+private fun FileRow(
+    entry: FileEntry,
+    selected: Boolean,
+    thumbnail: ThumbnailSource?,
+    imageLoader: ImageLoader,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
     val context = LocalContext.current
     val subtitle = remember(entry) {
         val date = if (entry.lastModified > 0) {
@@ -108,7 +132,7 @@ private fun FileRow(entry: FileEntry, selected: Boolean, onClick: () -> Unit, on
             .alpha(if (entry.isHidden) 0.6f else 1f),
         headlineContent = { Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         supportingContent = if (subtitle.isEmpty()) null else ({ Text(subtitle, maxLines = 1) }),
-        leadingContent = { FileIcon(entry, selected) },
+        leadingContent = { FileIcon(entry, selected, thumbnail, imageLoader) },
         colors = if (selected) {
             ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
         } else {
@@ -118,21 +142,50 @@ private fun FileRow(entry: FileEntry, selected: Boolean, onClick: () -> Unit, on
 }
 
 @Composable
-private fun FileIcon(entry: FileEntry, selected: Boolean) {
+private fun FileIcon(entry: FileEntry, selected: Boolean, thumbnail: ThumbnailSource?, imageLoader: ImageLoader) {
     val colors = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
-            .size(40.dp)
-            .background(if (selected) colors.primary else colors.surfaceVariant, CircleShape),
+            .size(ICON_SIZE)
+            .clip(CircleShape)
+            .background(if (selected) colors.primary else colors.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
+        // The file-type icon doubles as placeholder and as the fallback when decoding fails.
+        var thumbnailLoaded by remember(thumbnail) { mutableStateOf(false) }
+        val iconAlpha by animateFloatAsState(if (thumbnailLoaded && !selected) 0f else 1f, label = "iconAlpha")
         Icon(
             imageVector = if (selected) Icons.Default.Check else FileKind.of(entry).icon(),
             contentDescription = null,
+            modifier = Modifier.alpha(iconAlpha),
             tint = if (selected) colors.onPrimary else colors.onSurfaceVariant,
         )
+        if (thumbnail != null) {
+            val context = LocalContext.current
+            val sizePx = with(LocalDensity.current) { ICON_SIZE.roundToPx() }
+            val request = remember(thumbnail, sizePx) {
+                ImageRequest.Builder(context)
+                    .data(thumbnail)
+                    .size(sizePx)
+                    .precision(Precision.INEXACT)
+                    .memoryCachePolicy(CachePolicy.ENABLED)
+                    .diskCachePolicy(if (thumbnail.allowDiskCache) CachePolicy.ENABLED else CachePolicy.DISABLED)
+                    .build()
+            }
+            // Kept in the tree while selected so the bitmap does not reload when deselecting.
+            AsyncImage(
+                model = request,
+                imageLoader = imageLoader,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.matchParentSize().alpha(if (selected) 0f else 1f),
+                onState = { thumbnailLoaded = it is AsyncImagePainter.State.Success },
+            )
+        }
     }
 }
+
+private val ICON_SIZE = 40.dp
 
 private fun FileKind.icon(): ImageVector = when (this) {
     FileKind.FOLDER -> Icons.Default.Folder
