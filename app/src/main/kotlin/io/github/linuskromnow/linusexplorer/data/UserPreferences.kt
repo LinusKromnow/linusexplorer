@@ -44,6 +44,7 @@ class UserPreferences(context: Context) {
             prefs[DESCENDING] = updated.descending
             prefs[FOLDERS_FIRST] = updated.foldersFirst
             prefs[SHOW_HIDDEN] = updated.showHidden
+            prefs[SHOW_THUMBNAILS] = updated.showThumbnails
         }
     }
 
@@ -72,6 +73,7 @@ class UserPreferences(context: Context) {
             descending = this[DESCENDING] ?: defaults.descending,
             foldersFirst = this[FOLDERS_FIRST] ?: defaults.foldersFirst,
             showHidden = this[SHOW_HIDDEN] ?: defaults.showHidden,
+            showThumbnails = this[SHOW_THUMBNAILS] ?: defaults.showThumbnails,
         )
     }
 
@@ -96,6 +98,7 @@ class UserPreferences(context: Context) {
         val DESCENDING = booleanPreferencesKey("sort_descending")
         val FOLDERS_FIRST = booleanPreferencesKey("folders_first")
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
+        val SHOW_THUMBNAILS = booleanPreferencesKey("show_thumbnails")
         val EDITOR_WRAP = booleanPreferencesKey("editor_word_wrap")
         val EDITOR_FONT_SIZE = intPreferencesKey("editor_font_size")
         val PIN_HASH = stringPreferencesKey("app_lock_pin_hash")

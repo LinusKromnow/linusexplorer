@@ -7,6 +7,7 @@ data class BrowserPrefs(
     val descending: Boolean = false,
     val foldersFirst: Boolean = true,
     val showHidden: Boolean = false,
+    val showThumbnails: Boolean = true,
 )
 
 object FileSorting {

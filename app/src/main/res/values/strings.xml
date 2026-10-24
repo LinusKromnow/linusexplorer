@@ -12,6 +12,7 @@
     <string name="action_sort">Sort</string>
     <string name="action_more">More options</string>
     <string name="action_show_hidden">Show hidden files</string>
+    <string name="action_show_thumbnails">Show thumbnails</string>
     <string name="action_new_folder">New folder</string>
     <string name="action_new_file">New file</string>
     <string name="action_refresh">Refresh</string>
