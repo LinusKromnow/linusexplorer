@@ -1,7 +1,7 @@
 # LinusExplorer
 
 A free, open-source Android file manager in the spirit of Amaze and Solid Explorer, with no ads, tracking or paid tiers.
-It covers local storage today, with archives, file encryption, an encrypted vault and a built-in text editor, with network (SFTP, FTP, SMB, WebDAV) and cloud storage planned. See [ROADMAP.md](ROADMAP.md).
+It covers local storage today, including archives, file encryption, an encrypted vault and a built-in text editor. Network (SFTP, FTP, SMB, WebDAV) and cloud storage are planned. See [ROADMAP.md](ROADMAP.md).
 
 ## Building
 
