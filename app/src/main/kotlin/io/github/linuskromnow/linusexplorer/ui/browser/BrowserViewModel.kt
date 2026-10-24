@@ -23,6 +23,9 @@ import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveWriter
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.fs.search.FileSearch
+import io.github.linuskromnow.linusexplorer.fs.search.NameMatcher
+import io.github.linuskromnow.linusexplorer.fs.search.SearchLimits
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.storage.Place
 import io.github.linuskromnow.linusexplorer.storage.Places
@@ -30,6 +33,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -65,6 +69,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val scrollPositions = HashMap<Location, Pair<Int, Int>>()
     private var unsortedEntries: List<FileEntry> = emptyList()
     private var loadJob: Job? = null
+    private var searchJob: Job? = null
+
+    /** Lets a cancelled search that is still winding down tell it is stale and drop its results. */
+    @Volatile private var searchGeneration = 0
     private val tasks = container.tasks
 
     /** What to retry once the user has typed the password asked for by a [BrowserDialog.Password]. */
@@ -97,6 +105,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun navigateTo(path: String) = navigateTo(_state.value.location.copy(path = path))
 
     fun navigateTo(location: Location) {
+        closeSearch()
         val current = _state.value.location
         val target = location.copy(path = VfsPaths.normalize(location.path))
         if (target == current) return refresh()
@@ -126,6 +135,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     private fun show(location: Location) {
+        closeSearch()
         unsortedEntries = emptyList()
         _state.update {
             it.copy(
@@ -144,6 +154,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private fun load() {
         loadJob?.cancel()
         val location = _state.value.location
+        if (_state.value.search?.query?.isNotBlank() == true) launchSearch(debounce = false) // results may be stale now
         loadJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
             try {
@@ -153,7 +164,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 _state.update {
                     it.copy(
                         entries = FileSorting.sort(entries, it.prefs),
-                        selection = it.selection.filterTo(HashSet()) { path -> path in paths },
+                        // Search results live deeper than this listing, so their selection stays.
+                        selection = if (it.search != null) it.selection else it.selection.filterTo(HashSet()) { path -> path in paths },
                         isLoading = false,
                     )
                 }
@@ -248,7 +260,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun selectAll() {
-        _state.update { state -> state.copy(selection = state.entries.mapTo(HashSet()) { it.path }) }
+        _state.update { state -> state.copy(selection = state.visibleEntries.mapTo(HashSet()) { it.path }) }
     }
 
     fun clearSelection() {
@@ -260,6 +272,69 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val entry = _state.value.selectedEntries.singleOrNull()?.takeIf { !it.isDirectory } ?: return
         clearSelection()
         openExternally(entry)
+    }
+
+    // endregion
+
+    // region Search
+
+    fun openSearch() {
+        if (_state.value.search != null) return
+        _state.update { it.copy(search = SearchState(), selection = emptySet()) }
+    }
+
+    fun closeSearch() {
+        if (_state.value.search == null) return
+        searchGeneration++
+        searchJob?.cancel()
+        _state.update { it.copy(search = null, selection = emptySet()) }
+    }
+
+    fun setSearchQuery(query: String) {
+        if (_state.value.search == null) return
+        _state.update { state -> state.copy(search = state.search?.copy(query = query)) }
+        launchSearch(debounce = true)
+    }
+
+    /** Searches the current folder and everything below it, streaming hits into [BrowserUiState.search]. */
+    private fun launchSearch(debounce: Boolean) {
+        searchJob?.cancel()
+        val generation = ++searchGeneration
+        val query = _state.value.search?.query.orEmpty()
+        val matcher = NameMatcher.parse(query)
+        if (matcher == null) {
+            updateSearch(generation) { SearchState(query = query) }
+            return
+        }
+        val location = _state.value.location
+        val includeHidden = _state.value.prefs.showHidden
+        searchJob = viewModelScope.launch {
+            if (debounce) delay(SEARCH_DEBOUNCE_MS) // don't walk the tree for every keystroke
+            updateSearch(generation) { SearchState(query = query, running = true) }
+            try {
+                val summary = withContext(Dispatchers.IO) {
+                    FileSearch.search(
+                        fileSystems[location.fsId], location.path, matcher, SearchLimits(includeHidden = includeHidden),
+                        onProgress = { scanned -> updateSearch(generation) { it.copy(scanned = scanned) } },
+                    ) { hit -> updateSearch(generation) { it.copy(results = it.results + hit) } }
+                }
+                updateSearch(generation) { it.copy(running = false, truncated = summary.truncated, scanned = summary.scanned) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: PasswordRequiredFsException) {
+                updateSearch(generation) { it.copy(running = false) }
+                askForPassword(e, retry = { launchSearch(debounce = false) })
+            } catch (e: Exception) {
+                updateSearch(generation) { it.copy(running = false, error = e.message ?: e.toString()) }
+            }
+        }
+    }
+
+    private fun updateSearch(generation: Int, transform: (SearchState) -> SearchState) {
+        _state.update { state ->
+            val search = state.search
+            if (search == null || generation != searchGeneration) state else state.copy(search = transform(search))
+        }
     }
 
     // endregion
@@ -298,8 +373,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             val archive = archiveFor(location.fsId, entry, File(entry.path))
             archive.verifyPassword()
             val fs = fileSystems[location.fsId]
-            val dirName = FileTransfer.uniqueName(fs, location.path, ArchiveFormat.baseName(entry.name), isDirectory = true)
-            val dir = VfsPaths.child(location.path, dirName)
+            val parent = VfsPaths.parent(entry.path) ?: location.path
+            val dirName = FileTransfer.uniqueName(fs, parent, ArchiveFormat.baseName(entry.name), isDirectory = true)
+            val dir = VfsPaths.child(parent, dirName)
             fs.createDirectory(dir)
             val roots = archive.list(VfsPaths.ROOT).map { Location(archive.id, it.path) }
             fileTransfer.run(roots, Location(location.fsId, dir), move = false, conflicts, onProgress)
@@ -398,7 +474,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                     val path = FileEncryption.decrypt(fs, dialog.entry, local, dir.path, password.toCharArray(), onProgress)
                     _events.trySend(BrowserEvent.OpenFile(path))
                 } else {
-                    val path = FileEncryption.decrypt(fs, dialog.entry, fs, location.path, password.toCharArray(), onProgress)
+                    val path = FileEncryption.decrypt(fs, dialog.entry, fs, VfsPaths.parent(dialog.entry.path) ?: location.path, password.toCharArray(), onProgress)
                     if (deleteEncrypted) fs.delete(dialog.entry.path)
                     _events.trySend(BrowserEvent.Message(R.string.msg_decrypted, listOf(VfsPaths.name(path))))
                 }
@@ -644,7 +720,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun createFile(name: String) = runFsAction { fs, dir -> fs.createFile(VfsPaths.child(dir, name)) }
 
     fun rename(entry: FileEntry, newName: String) = runFsAction { fs, dir ->
-        fs.rename(entry.path, VfsPaths.child(dir, newName))
+        fs.rename(entry.path, VfsPaths.child(VfsPaths.parent(entry.path) ?: dir, newName)) // entry may be a search result
     }
 
     fun delete(entries: List<FileEntry>) {
@@ -689,6 +765,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     companion object {
         private const val MAX_HISTORY = 100
         private const val VAULT_AUTO_LOCK_MS = 60_000L
+        private const val SEARCH_DEBOUNCE_MS = 300L
 
         /** Cache sub-folder for files handed to other apps; cleared on every app start. */
         const val OPEN_CACHE = "open"

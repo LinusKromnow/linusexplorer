@@ -4,6 +4,14 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.core.content.ContextCompat
@@ -28,6 +36,7 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
@@ -146,8 +155,12 @@ fun BrowserScreen(
         }
     }
 
-    BackHandler(enabled = state.inSelectionMode || state.canGoBack) {
-        if (state.inSelectionMode) viewModel.clearSelection() else viewModel.navigateBack()
+    BackHandler(enabled = state.inSelectionMode || state.search != null || state.canGoBack) {
+        when {
+            state.inSelectionMode -> viewModel.clearSelection()
+            state.search != null -> viewModel.closeSearch()
+            else -> viewModel.navigateBack()
+        }
     }
     BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
 
@@ -173,10 +186,13 @@ fun BrowserScreen(
             )
         },
     ) {
+        val searchState = state.search
         Scaffold(
             topBar = {
                 if (state.inSelectionMode) {
                     SelectionTopBar(state, viewModel)
+                } else if (searchState != null) {
+                    SearchTopBar(searchState.query, viewModel)
                 } else {
                     BrowserTopBar(
                         title = state.breadcrumbs.lastOrNull()?.label.orEmpty(),
@@ -236,6 +252,7 @@ fun BrowserScreen(
                             actionLabel = stringResource(R.string.action_retry),
                             onAction = viewModel::refresh,
                         )
+                        searchState != null -> SearchContent(state, searchState, viewModel)
                         state.entries.isEmpty() && !state.isLoading -> MessageContent(
                             text = stringResource(R.string.folder_empty),
                         )
@@ -302,6 +319,9 @@ private fun BrowserTopBar(
             }
         },
         actions = {
+            IconButton(onClick = viewModel::openSearch) {
+                Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
+            }
             val grid = prefs.viewMode == ViewMode.GRID
             IconButton(onClick = { viewModel.updatePrefs { it.copy(viewMode = if (grid) ViewMode.LIST else ViewMode.GRID) } }) {
                 Icon(
@@ -390,6 +410,79 @@ private fun BrowserTopBar(
             }
         },
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchTopBar(query: String, viewModel: BrowserViewModel) {
+    // The text lives here and is pushed to the view model, so typing never waits on the state flow.
+    var text by rememberSaveable { mutableStateOf(query) }
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    TopAppBar(
+        title = {
+            TextField(
+                value = text,
+                onValueChange = {
+                    text = it
+                    viewModel.setSearchQuery(it)
+                },
+                placeholder = { Text(stringResource(R.string.search_hint)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = Color.Transparent,
+                    unfocusedContainerColor = Color.Transparent,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                ),
+                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
+            )
+        },
+        navigationIcon = {
+            IconButton(onClick = viewModel::closeSearch) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_close_search))
+            }
+        },
+        actions = {
+            if (text.isNotEmpty()) {
+                IconButton(onClick = {
+                    text = ""
+                    viewModel.setSearchQuery("")
+                }) {
+                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_clear_search))
+                }
+            }
+        },
+    )
+}
+
+@Composable
+private fun SearchContent(state: BrowserUiState, search: SearchState, viewModel: BrowserViewModel) {
+    Column(Modifier.fillMaxSize()) {
+        if (search.running) LinearProgressIndicator(Modifier.fillMaxWidth())
+        val status = when {
+            search.query.isBlank() -> null
+            search.running -> stringResource(R.string.search_scanning, search.scanned)
+            search.truncated -> pluralStringResource(R.plurals.search_truncated, search.results.size, search.results.size)
+            search.results.isNotEmpty() -> pluralStringResource(R.plurals.search_result_count, search.results.size, search.results.size)
+            else -> null
+        }
+        if (status != null) {
+            Text(
+                status,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            )
+        }
+        when {
+            search.error != null -> MessageContent(search.error)
+            search.query.isBlank() -> MessageContent(stringResource(R.string.search_intro))
+            search.results.isEmpty() && !search.running -> MessageContent(stringResource(R.string.search_no_results))
+            else -> SearchResultList(state, search, viewModel)
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

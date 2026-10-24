@@ -184,6 +184,27 @@ private fun FileCell(
     }
 }
 
+/** Search results as a list; each row shows where the match lives, relative to the folder searched. */
+@Composable
+fun SearchResultList(state: BrowserUiState, search: SearchState, viewModel: BrowserViewModel) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 96.dp),
+    ) {
+        items(search.results, key = { it.entry.path }) { hit ->
+            FileRow(
+                entry = hit.entry,
+                selected = hit.entry.path in state.selection,
+                thumbnail = if (state.prefs.showThumbnails) Thumbnails.sourceFor(state.location.fsId, hit.entry) else null,
+                imageLoader = viewModel.imageLoader,
+                onClick = { viewModel.onEntryClick(hit.entry) },
+                onLongClick = { viewModel.onEntryLongClick(hit.entry) },
+                subtitleOverride = hit.relativePath,
+            )
+        }
+    }
+}
+
 @Composable
 private fun FileRow(
     entry: FileEntry,
@@ -192,9 +213,10 @@ private fun FileRow(
     imageLoader: ImageLoader,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    subtitleOverride: String? = null,
 ) {
     val context = LocalContext.current
-    val subtitle = remember(entry) {
+    val subtitle = subtitleOverride ?: remember(entry) {
         val date = if (entry.lastModified > 0) {
             DateUtils.formatDateTime(
                 context,

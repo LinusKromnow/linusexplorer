@@ -38,6 +38,23 @@
         <item quantity="other">Move %d items here</item>
     </plurals>
 
+    <!-- Search -->
+    <string name="action_search">Search</string>
+    <string name="action_close_search">Close search</string>
+    <string name="action_clear_search">Clear</string>
+    <string name="search_hint">Search in this folder</string>
+    <string name="search_intro">Searches this folder and everything below it by name. Use * and ? as wildcards.</string>
+    <string name="search_no_results">No matches</string>
+    <string name="search_scanning">Searching… %d items checked</string>
+    <plurals name="search_result_count">
+        <item quantity="one">%d match</item>
+        <item quantity="other">%d matches</item>
+    </plurals>
+    <plurals name="search_truncated">
+        <item quantity="one">Showing only the first %d match. Refine your search to see others.</item>
+        <item quantity="other">Showing only the first %d matches. Refine your search to see others.</item>
+    </plurals>
+
     <!-- Sorting -->
     <string name="sort_name">Name</string>
     <string name="sort_size">Size</string>

@@ -4,6 +4,7 @@ import android.content.res.Resources
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.Location
+import io.github.linuskromnow.linusexplorer.fs.search.SearchHit
 import io.github.linuskromnow.linusexplorer.tasks.TransferState
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.storage.Place
@@ -26,11 +27,27 @@ data class BrowserUiState(
     val transferHidden: Boolean = false,
     /** Whether the vault can be unlocked with a fingerprint. */
     val vaultBiometric: Boolean = false,
+    /** Non-null while the search bar is open; its results replace the folder listing. */
+    val search: SearchState? = null,
 ) {
     val inSelectionMode: Boolean get() = selection.isNotEmpty()
     val inVault: Boolean get() = location.fsId == VaultFileSystem.ID
-    val selectedEntries: List<FileEntry> get() = entries.filter { it.path in selection }
+    /** What the user currently sees: the search results while searching, else the folder content. */
+    val visibleEntries: List<FileEntry> get() = search?.results?.map { it.entry } ?: entries
+    val selectedEntries: List<FileEntry> get() = visibleEntries.filter { it.path in selection }
 }
+
+data class SearchState(
+    val query: String = "",
+    /** In the order found, shallowest first. */
+    val results: List<SearchHit> = emptyList(),
+    val running: Boolean = false,
+    /** Entries looked at so far. */
+    val scanned: Int = 0,
+    /** Stopped at the result limit. */
+    val truncated: Boolean = false,
+    val error: String? = null,
+)
 
 data class Breadcrumb(val label: String, val path: String)
 
