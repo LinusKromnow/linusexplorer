@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name" translatable="false">LinusExplorer</string>
+
+    <!-- Places -->
+    <string name="place_root">Root</string>
+    <string name="drawer_storage">Storage</string>
+    <string name="drawer_folders">Folders</string>
+
+    <!-- Actions -->
+    <string name="action_open_drawer">Open navigation</string>
+    <string name="action_sort">Sort</string>
+    <string name="action_more">More options</string>
+    <string name="action_show_hidden">Show hidden files</string>
+    <string name="action_new_folder">New folder</string>
+    <string name="action_new_file">New file</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_clear_selection">Clear selection</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_cut">Cut</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_share">Share</string>
+    <string name="action_select_all">Select all</string>
+    <string name="action_clear_clipboard">Clear clipboard</string>
+    <string name="action_create">Create</string>
+    <string name="action_cancel">Cancel</string>
+    <plurals name="action_paste_here">
+        <item quantity="one">Paste %d item</item>
+        <item quantity="other">Paste %d items</item>
+    </plurals>
+    <plurals name="action_move_here">
+        <item quantity="one">Move %d item here</item>
+        <item quantity="other">Move %d items here</item>
+    </plurals>
+
+    <!-- Sorting -->
+    <string name="sort_name">Name</string>
+    <string name="sort_size">Size</string>
+    <string name="sort_date">Date modified</string>
+    <string name="sort_type">Type</string>
+    <string name="sort_descending">Descending</string>
+    <string name="sort_folders_first">Folders first</string>
+
+    <!-- Browser -->
+    <string name="folder_empty">This folder is empty</string>
+    <string name="field_name">Name</string>
+    <plurals name="selected_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+
+    <!-- Delete -->
+    <string name="delete_one_title">Delete “%1$s”?</string>
+    <plurals name="delete_many_title">
+        <item quantity="one">Delete %d item?</item>
+        <item quantity="other">Delete %d items?</item>
+    </plurals>
+    <string name="delete_warning">This can’t be undone.</string>
+
+    <!-- Transfers -->
+    <string name="transfer_copying">Copying</string>
+    <string name="transfer_moving">Moving</string>
+    <string name="transfer_preparing">Preparing…</string>
+    <plurals name="transfer_files_progress">
+        <item quantity="one">%1$d of %2$d file</item>
+        <item quantity="other">%1$d of %2$d files</item>
+    </plurals>
+
+    <!-- Messages -->
+    <string name="msg_error">Error: %1$s</string>
+    <string name="msg_no_app_to_open">No installed app can open this file</string>
+    <string name="msg_open_remote_unsupported">Opening remote files is not supported yet</string>
+    <string name="msg_transfer_cancelled">Transfer cancelled</string>
+    <plurals name="msg_copied_to_clipboard">
+        <item quantity="one">%d item ready to paste</item>
+        <item quantity="other">%d items ready to paste</item>
+    </plurals>
+    <plurals name="msg_cut_to_clipboard">
+        <item quantity="one">%d item ready to move</item>
+        <item quantity="other">%d items ready to move</item>
+    </plurals>
+    <plurals name="msg_copied">
+        <item quantity="one">Copied %d item</item>
+        <item quantity="other">Copied %d items</item>
+    </plurals>
+    <plurals name="msg_moved">
+        <item quantity="one">Moved %d item</item>
+        <item quantity="other">Moved %d items</item>
+    </plurals>
+    <plurals name="msg_deleted">
+        <item quantity="one">Deleted %d item</item>
+        <item quantity="other">Deleted %d items</item>
+    </plurals>
+
+    <!-- Permission -->
+    <string name="permission_title">Storage access needed</string>
+    <string name="permission_body">LinusExplorer needs permission to manage all files so it can browse, copy, move and delete them. Nothing leaves your device unless you connect a network or cloud storage yourself.</string>
+    <string name="permission_grant">Grant access</string>
+</resources>

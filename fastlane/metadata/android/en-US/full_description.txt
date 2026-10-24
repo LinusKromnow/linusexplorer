@@ -1,0 +1,16 @@
+LinusExplorer is a free and open-source file manager. No ads, no tracking, no paid features.
+
+<b>Features</b>
+<ul>
+<li>Browse internal storage, SD cards and the root file system</li>
+<li>Copy, move, rename, delete and share files and folders</li>
+<li>Multi-select, natural sorting, hidden files toggle</li>
+<li>Material You design with light and dark themes</li>
+</ul>
+
+<b>Coming soon</b>
+<ul>
+<li>SFTP, FTP/FTPS, SMB and WebDAV</li>
+<li>Cloud storage: Google Drive, Dropbox, OneDrive, Nextcloud, S3 and more</li>
+<li>Archives, image thumbnails, search, bookmarks and tabs</li>
+</ul>
