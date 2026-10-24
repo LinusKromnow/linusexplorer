@@ -174,6 +174,16 @@ fun BrowserScreen(
                     viewModel.navigateTo(Location(LocalFileSystem.ID, place.path))
                     scope.launch { drawerState.close() }
                 },
+                connections = state.connections,
+                currentFsId = state.location.fsId,
+                onConnectionClick = { connection ->
+                    viewModel.openConnection(connection)
+                    scope.launch { drawerState.close() }
+                },
+                onEditConnection = { connection ->
+                    viewModel.showDialog(BrowserDialog.EditConnection(connection))
+                    scope.launch { drawerState.close() }
+                },
                 onVaultClick = {
                     viewModel.openVault()
                     scope.launch { drawerState.close() }

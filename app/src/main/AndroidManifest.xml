@@ -13,6 +13,9 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
 
+    <!-- Only used for servers and cloud accounts the user adds (SFTP, ...). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Long copies keep running in a foreground service with a progress notification. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />

@@ -203,6 +203,30 @@
     <string name="settings_privacy">Privacy</string>
     <string name="settings_privacy_summary">No ads, no tracking, no analytics. LinusExplorer only connects to servers you add yourself.</string>
 
+    <!-- linusexplorer-8e: network -->
+    <string name="drawer_network">Network</string>
+    <string name="connection_add">Add connection</string>
+    <string name="connection_edit">Edit connection</string>
+    <string name="connection_delete">Delete connection</string>
+    <string name="connection_name_optional">Name (optional)</string>
+    <string name="connection_host">Server</string>
+    <string name="connection_port">Port</string>
+    <string name="connection_username">User name</string>
+    <string name="connection_auth_password">Password</string>
+    <string name="connection_auth_key">Private key</string>
+    <string name="connection_remember_password">Remember password (stored encrypted)</string>
+    <string name="connection_choose_key">Choose private key file…</string>
+    <string name="connection_key_loaded">Key loaded · choose another</string>
+    <string name="connection_key_invalid">That file doesn’t look like a private key</string>
+    <string name="connection_key_passphrase">Key passphrase (if any)</string>
+    <string name="connection_path">Start folder</string>
+    <string name="trust_host_title">Trust this server?</string>
+    <string name="trust_host_body">First connection to %1$s. Check that this fingerprint matches the server before trusting it:</string>
+    <string name="trust_host_accept">Trust</string>
+    <string name="trust_host_changed_title">Server key changed!</string>
+    <string name="trust_host_changed_body">The key of %1$s is different from the one you trusted before. This can mean someone is intercepting the connection. Only continue if you know the server was reinstalled or its key was replaced. New fingerprint:</string>
+    <string name="trust_host_accept_new">Trust new key</string>
+
     <!-- App lock -->
     <string name="app_lock_title">App lock</string>
     <string name="app_lock_body">Choose a PIN of at least 4 digits. LinusExplorer asks for it when it starts and after 30 seconds in the background.</string>

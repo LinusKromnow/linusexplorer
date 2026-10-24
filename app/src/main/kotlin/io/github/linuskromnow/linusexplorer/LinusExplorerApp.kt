@@ -16,7 +16,13 @@ import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailFetcher
 import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailKeyer
 import io.github.linuskromnow.linusexplorer.tasks.TransferService
 import io.github.linuskromnow.linusexplorer.ui.browser.BrowserViewModel
+import io.github.linuskromnow.linusexplorer.fs.network.ConnectionStore
+import io.github.linuskromnow.linusexplorer.fs.network.KnownHosts
+import io.github.linuskromnow.linusexplorer.fs.network.NetworkFileSystems
+import io.github.linuskromnow.linusexplorer.security.KeystoreSecretBox
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import java.io.File
+import java.security.Security
 
 class LinusExplorerApp : Application() {
     lateinit var container: AppContainer
@@ -24,6 +30,9 @@ class LinusExplorerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // sshj needs the full BouncyCastle provider; Android ships a cut-down one under the same name.
+        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME)
+        Security.addProvider(BouncyCastleProvider())
         container = AppContainer(this)
         TransferService.createChannel(this)
         // Files decrypted or unpacked for other apps only need to live until the next start.
@@ -39,6 +48,11 @@ class AppContainer(context: Context) {
         register(LocalFileSystem())
         register(vault)
     }
+    val network = NetworkFileSystems(
+        registry = fileSystems,
+        store = ConnectionStore(File(context.filesDir, "connections.bin"), KeystoreSecretBox("linusexplorer_connections")),
+        knownHosts = KnownHosts(File(context.filesDir, "known_hosts")),
+    ).also { network -> fileSystems.resolver = network::resolve }
     val fileTransfer = FileTransfer(fileSystems)
     val preferences = UserPreferences(context)
     val tasks = TaskManager(context.applicationContext)
