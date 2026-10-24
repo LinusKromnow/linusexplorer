@@ -7,8 +7,17 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.util.UUID
 
-enum class Protocol(val defaultPort: Int) {
-    SFTP(22),
+enum class Protocol(val defaultPort: Int, val label: String) {
+    SFTP(22, "SFTP"),
+    FTP(21, "FTP"),
+
+    /** Explicit TLS (AUTH TLS) on the normal FTP port. */
+    FTPS(21, "FTPS"),
+    ;
+
+    /** Whether the server can be used without a user name (FTP's "anonymous"). */
+    val allowsAnonymous: Boolean get() = this == FTP || this == FTPS
+    val supportsKeys: Boolean get() = this == SFTP
 }
 
 /** A saved remote storage. Secrets live here too; the whole list is stored encrypted (see [ConnectionStore]). */

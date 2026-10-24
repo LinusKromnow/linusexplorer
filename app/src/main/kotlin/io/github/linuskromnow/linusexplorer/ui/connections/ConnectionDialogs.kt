@@ -66,7 +66,9 @@ fun ConnectionDialog(
     }
 
     val portNumber = port.toIntOrNull()?.takeIf { it in 1..65535 }
-    val valid = host.isNotBlank() && portNumber != null && username.isNotBlank() && (!useKey || privateKey != null)
+    val keyAuth = useKey && protocol.supportsKeys
+    val valid = host.isNotBlank() && portNumber != null &&
+        (username.isNotBlank() || protocol.allowsAnonymous) && (!keyAuth || privateKey != null)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -84,7 +86,7 @@ fun ConnectionDialog(
                                 if (port == protocol.defaultPort.toString()) port = option.defaultPort.toString()
                                 protocol = option
                             },
-                            label = { Text(option.name) },
+                            label = { Text(option.label) },
                         )
                     }
                 }
@@ -93,12 +95,18 @@ fun ConnectionDialog(
                     Field(host, { host = it.trim() }, stringResource(R.string.connection_host), Modifier.weight(2f), KeyboardType.Uri)
                     Field(port, { port = it.filter(Char::isDigit) }, stringResource(R.string.connection_port), Modifier.weight(1f), KeyboardType.Number)
                 }
-                Field(username, { username = it.trim() }, stringResource(R.string.connection_username))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = !useKey, onClick = { useKey = false }, label = { Text(stringResource(R.string.connection_auth_password)) })
-                    FilterChip(selected = useKey, onClick = { useKey = true }, label = { Text(stringResource(R.string.connection_auth_key)) })
+                Field(
+                    username,
+                    { username = it.trim() },
+                    stringResource(if (protocol.allowsAnonymous) R.string.connection_username_anonymous else R.string.connection_username),
+                )
+                if (protocol.supportsKeys) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChip(selected = !useKey, onClick = { useKey = false }, label = { Text(stringResource(R.string.connection_auth_password)) })
+                        FilterChip(selected = useKey, onClick = { useKey = true }, label = { Text(stringResource(R.string.connection_auth_key)) })
+                    }
                 }
-                if (!useKey) {
+                if (!keyAuth) {
                     PasswordField(password, { password = it }, stringResource(R.string.field_password))
                     CheckboxRow(stringResource(R.string.connection_remember_password), rememberPassword) { rememberPassword = it }
                 } else {
@@ -130,9 +138,9 @@ fun ConnectionDialog(
                             host = host,
                             port = portNumber!!,
                             username = username,
-                            password = if (!useKey && rememberPassword) password else null,
-                            privateKey = if (useKey) privateKey else null,
-                            keyPassphrase = if (useKey) keyPassphrase.ifEmpty { null } else null,
+                            password = if (!keyAuth && rememberPassword) password else null,
+                            privateKey = if (keyAuth) privateKey else null,
+                            keyPassphrase = if (keyAuth) keyPassphrase.ifEmpty { null } else null,
                             path = VfsPaths.normalize(path.ifBlank { VfsPaths.ROOT }),
                         ),
                     )

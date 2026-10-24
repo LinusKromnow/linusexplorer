@@ -29,8 +29,8 @@ Each is a `VirtualFileSystem` plus a saved-connection entry (credentials in Andr
 
 | Protocol        | Library                        | License    |
 |-----------------|--------------------------------|------------|
-| SFTP / SSH      | sshj                           | Apache-2.0 |
-| FTP / FTPS      | Apache Commons Net             | Apache-2.0 |
+| ✅ SFTP / SSH   | sshj                           | Apache-2.0 |
+| ✅ FTP / FTPS   | Apache Commons Net             | Apache-2.0 |
 | SMB 2/3         | smbj                           | Apache-2.0 |
 | WebDAV          | OkHttp (hand-written client)   | Apache-2.0 |
 

@@ -2,6 +2,7 @@ package io.github.linuskromnow.linusexplorer.fs.network
 
 import io.github.linuskromnow.linusexplorer.fs.FileSystemRegistry
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
+import io.github.linuskromnow.linusexplorer.fs.network.ftp.FtpFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.sftp.SftpFileSystem
 import java.io.Closeable
 
@@ -36,5 +37,6 @@ class NetworkFileSystems(
 
     private fun create(connection: Connection): VirtualFileSystem = when (connection.protocol) {
         Protocol.SFTP -> SftpFileSystem(connection, knownHosts)
+        Protocol.FTP, Protocol.FTPS -> FtpFileSystem(connection, knownHosts)
     }
 }
