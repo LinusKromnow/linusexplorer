@@ -2,12 +2,15 @@ package io.github.linuskromnow.linusexplorer.fs
 
 enum class SortField { NAME, SIZE, DATE, TYPE }
 
+enum class ViewMode { LIST, GRID }
+
 data class BrowserPrefs(
     val sortField: SortField = SortField.NAME,
     val descending: Boolean = false,
     val foldersFirst: Boolean = true,
     val showHidden: Boolean = false,
     val showThumbnails: Boolean = true,
+    val viewMode: ViewMode = ViewMode.LIST,
 )
 
 object FileSorting {

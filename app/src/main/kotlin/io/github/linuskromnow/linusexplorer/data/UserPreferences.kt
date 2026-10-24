@@ -12,6 +12,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import io.github.linuskromnow.linusexplorer.editor.EditorPrefs
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.SortField
+import io.github.linuskromnow.linusexplorer.fs.ViewMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -45,6 +46,7 @@ class UserPreferences(context: Context) {
             prefs[FOLDERS_FIRST] = updated.foldersFirst
             prefs[SHOW_HIDDEN] = updated.showHidden
             prefs[SHOW_THUMBNAILS] = updated.showThumbnails
+            prefs[VIEW_MODE] = updated.viewMode.name
         }
     }
 
@@ -74,6 +76,7 @@ class UserPreferences(context: Context) {
             foldersFirst = this[FOLDERS_FIRST] ?: defaults.foldersFirst,
             showHidden = this[SHOW_HIDDEN] ?: defaults.showHidden,
             showThumbnails = this[SHOW_THUMBNAILS] ?: defaults.showThumbnails,
+            viewMode = this[VIEW_MODE]?.let { name -> ViewMode.entries.find { it.name == name } } ?: defaults.viewMode,
         )
     }
 
@@ -99,6 +102,7 @@ class UserPreferences(context: Context) {
         val FOLDERS_FIRST = booleanPreferencesKey("folders_first")
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
         val SHOW_THUMBNAILS = booleanPreferencesKey("show_thumbnails")
+        val VIEW_MODE = stringPreferencesKey("view_mode")
         val EDITOR_WRAP = booleanPreferencesKey("editor_word_wrap")
         val EDITOR_FONT_SIZE = intPreferencesKey("editor_font_size")
         val PIN_HASH = stringPreferencesKey("app_lock_pin_hash")

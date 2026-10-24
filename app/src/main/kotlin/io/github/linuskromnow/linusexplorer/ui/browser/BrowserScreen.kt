@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -72,6 +74,7 @@ import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEncryption
 import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.fs.SortField
+import io.github.linuskromnow.linusexplorer.fs.ViewMode
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.security.Biometrics
@@ -299,6 +302,13 @@ private fun BrowserTopBar(
             }
         },
         actions = {
+            val grid = prefs.viewMode == ViewMode.GRID
+            IconButton(onClick = { viewModel.updatePrefs { it.copy(viewMode = if (grid) ViewMode.LIST else ViewMode.GRID) } }) {
+                Icon(
+                    if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
+                    contentDescription = stringResource(if (grid) R.string.action_list_view else R.string.action_grid_view),
+                )
+            }
             IconButton(onClick = { sortMenuOpen = true }) {
                 Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = stringResource(R.string.action_sort))
             }

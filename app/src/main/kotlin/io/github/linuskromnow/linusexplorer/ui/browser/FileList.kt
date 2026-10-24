@@ -15,6 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -22,6 +26,9 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
@@ -55,12 +62,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.ImageLoader
 import coil3.compose.AsyncImage
@@ -70,12 +79,46 @@ import coil3.request.ImageRequest
 import coil3.size.Precision
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.FileKind
+import io.github.linuskromnow.linusexplorer.fs.ViewMode
 import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailSource
 import io.github.linuskromnow.linusexplorer.thumbnails.Thumbnails
 
 @Composable
 fun FileList(state: BrowserUiState, viewModel: BrowserViewModel) {
     val location = state.location
+    val grid = state.prefs.viewMode == ViewMode.GRID
+    fun thumbnailFor(entry: FileEntry) =
+        if (state.prefs.showThumbnails) Thumbnails.sourceFor(location.fsId, entry) else null
+
+    if (grid) {
+        val gridState = remember(location) {
+            val (index, offset) = viewModel.scrollPosition(location)
+            LazyGridState(index, offset)
+        }
+        DisposableEffect(location, gridState) {
+            onDispose {
+                viewModel.saveScrollPosition(location, gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset)
+            }
+        }
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(GRID_CELL_MIN_WIDTH), // as many columns as fit the width
+            state = gridState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 96.dp), // clear of the FAB
+        ) {
+            gridItems(state.entries, key = { it.path }) { entry ->
+                FileCell(
+                    entry = entry,
+                    selected = entry.path in state.selection,
+                    thumbnail = thumbnailFor(entry),
+                    imageLoader = viewModel.imageLoader,
+                    onClick = { viewModel.onEntryClick(entry) },
+                    onLongClick = { viewModel.onEntryLongClick(entry) },
+                )
+            }
+        }
+        return
+    }
     val listState = remember(location) {
         val (index, offset) = viewModel.scrollPosition(location)
         LazyListState(index, offset)
@@ -94,12 +137,50 @@ fun FileList(state: BrowserUiState, viewModel: BrowserViewModel) {
             FileRow(
                 entry = entry,
                 selected = entry.path in state.selection,
-                thumbnail = if (state.prefs.showThumbnails) Thumbnails.sourceFor(location.fsId, entry) else null,
+                thumbnail = thumbnailFor(entry),
                 imageLoader = viewModel.imageLoader,
                 onClick = { viewModel.onEntryClick(entry) },
                 onLongClick = { viewModel.onEntryLongClick(entry) },
             )
         }
+    }
+}
+
+/** One tile of the grid view: thumbnail or file-type icon above a two-line name. */
+@Composable
+private fun FileCell(
+    entry: FileEntry,
+    selected: Boolean,
+    thumbnail: ThumbnailSource?,
+    imageLoader: ImageLoader,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .padding(2.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .alpha(if (entry.isHidden) 0.6f else 1f)
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        FileIcon(
+            entry, selected, thumbnail, imageLoader,
+            size = GRID_ICON_SIZE,
+            shape = RoundedCornerShape(12.dp),
+            iconSize = 40.dp,
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            entry.name,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -142,12 +223,20 @@ private fun FileRow(
 }
 
 @Composable
-private fun FileIcon(entry: FileEntry, selected: Boolean, thumbnail: ThumbnailSource?, imageLoader: ImageLoader) {
+private fun FileIcon(
+    entry: FileEntry,
+    selected: Boolean,
+    thumbnail: ThumbnailSource?,
+    imageLoader: ImageLoader,
+    size: Dp = ICON_SIZE,
+    shape: Shape = CircleShape,
+    iconSize: Dp = 24.dp,
+) {
     val colors = MaterialTheme.colorScheme
     Box(
         modifier = Modifier
-            .size(ICON_SIZE)
-            .clip(CircleShape)
+            .size(size)
+            .clip(shape)
             .background(if (selected) colors.primary else colors.surfaceVariant),
         contentAlignment = Alignment.Center,
     ) {
@@ -157,12 +246,12 @@ private fun FileIcon(entry: FileEntry, selected: Boolean, thumbnail: ThumbnailSo
         Icon(
             imageVector = if (selected) Icons.Default.Check else FileKind.of(entry).icon(),
             contentDescription = null,
-            modifier = Modifier.alpha(iconAlpha),
+            modifier = Modifier.size(iconSize).alpha(iconAlpha),
             tint = if (selected) colors.onPrimary else colors.onSurfaceVariant,
         )
         if (thumbnail != null) {
             val context = LocalContext.current
-            val sizePx = with(LocalDensity.current) { ICON_SIZE.roundToPx() }
+            val sizePx = with(LocalDensity.current) { size.roundToPx() }
             val request = remember(thumbnail, sizePx) {
                 ImageRequest.Builder(context)
                     .data(thumbnail)
@@ -186,6 +275,8 @@ private fun FileIcon(entry: FileEntry, selected: Boolean, thumbnail: ThumbnailSo
 }
 
 private val ICON_SIZE = 40.dp
+private val GRID_ICON_SIZE = 88.dp
+private val GRID_CELL_MIN_WIDTH = 104.dp
 
 private fun FileKind.icon(): ImageVector = when (this) {
     FileKind.FOLDER -> Icons.Default.Folder

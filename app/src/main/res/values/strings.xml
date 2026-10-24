@@ -10,6 +10,8 @@
     <!-- Actions -->
     <string name="action_open_drawer">Open navigation</string>
     <string name="action_sort">Sort</string>
+    <string name="action_grid_view">Grid view</string>
+    <string name="action_list_view">List view</string>
     <string name="action_more">More options</string>
     <string name="action_show_hidden">Show hidden files</string>
     <string name="action_show_thumbnails">Show thumbnails</string>
