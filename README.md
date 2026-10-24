@@ -23,6 +23,7 @@ app/src/main/kotlin/io/github/linuskromnow/linusexplorer/
 │   └── local/     Device storage backend
 ├── storage/       Android storage volumes and the "All files access" permission
 ├── data/          User preferences (DataStore)
+├── thumbnails/    Image, video and APK thumbnails for the file list (Coil, no network module)
 ├── ui/            Jetpack Compose screens
 └── util/          Opening and sharing files with other apps
 ```
