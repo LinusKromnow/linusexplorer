@@ -187,4 +187,40 @@
     <string name="permission_title">Storage access needed</string>
     <string name="permission_body">LinusExplorer needs permission to manage all files so it can browse, copy, move and delete them. Nothing leaves your device unless you connect a network or cloud storage yourself.</string>
     <string name="permission_grant">Grant access</string>
+
+    <!-- Text editor -->
+    <string name="action_edit">Edit</string>
+    <string name="action_discard">Discard</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_redo">Redo</string>
+    <string name="action_find">Find and replace</string>
+    <string name="action_back">Back</string>
+    <string name="editor_word_wrap">Word wrap</string>
+    <string name="editor_read_only">Read-only</string>
+    <string name="editor_font_larger">Larger text</string>
+    <string name="editor_font_smaller">Smaller text</string>
+    <string name="editor_unsaved_title">Unsaved changes</string>
+    <string name="editor_unsaved_body">Save your changes to “%1$s” before leaving?</string>
+    <string name="editor_binary">This looks like a binary file and can’t be edited as text.</string>
+    <string name="editor_notice_too_large">This file is larger than 5 MB. Only the first 5 MB are shown, read-only.</string>
+    <string name="editor_notice_read_only_storage">This location is read-only.</string>
+    <string name="editor_find_hint">Find</string>
+    <string name="editor_replace_hint">Replace with</string>
+    <string name="editor_find_previous">Previous match</string>
+    <string name="editor_find_next">Next match</string>
+    <string name="editor_match_case">Match case</string>
+    <string name="editor_replace">Replace</string>
+    <string name="editor_replace_all">All</string>
+    <string name="editor_close_find">Close find</string>
+    <string name="editor_no_matches">No matches</string>
+    <plurals name="editor_match_count">
+        <item quantity="one">%d match</item>
+        <item quantity="other">%d matches</item>
+    </plurals>
+    <plurals name="editor_replaced">
+        <item quantity="one">Replaced %d occurrence</item>
+        <item quantity="other">Replaced %d occurrences</item>
+    </plurals>
+    <string name="editor_saved">Saved</string>
+    <string name="editor_saved_as_utf8">Saved as UTF-8 because the text contains characters ISO-8859-1 can’t represent</string>
 </resources>

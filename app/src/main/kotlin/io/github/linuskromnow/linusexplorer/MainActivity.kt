@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -16,10 +20,12 @@ import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.security.Biometrics
 import io.github.linuskromnow.linusexplorer.security.SecureWindow
 import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
 import io.github.linuskromnow.linusexplorer.ui.browser.BrowserScreen
+import io.github.linuskromnow.linusexplorer.ui.editor.EditorScreen
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
 import io.github.linuskromnow.linusexplorer.ui.lock.LockScreen
 import io.github.linuskromnow.linusexplorer.ui.theme.LinusExplorerTheme
@@ -63,6 +69,17 @@ private fun AppRoot(lockViewModel: AppLockViewModel = viewModel()) {
                 onBiometric = biometric,
             )
         }
-        else -> BrowserScreen(lockViewModel = lockViewModel)
+        else -> {
+            // The editor is drawn over the browser instead of replacing it, so browser state and
+            // the vault's background auto-lock keep working while a file is open.
+            var editing by rememberSaveable(stateSaver = LocationSaver) { mutableStateOf<Location?>(null) }
+            BrowserScreen(onEditFile = { editing = it }, lockViewModel = lockViewModel)
+            editing?.let { EditorScreen(location = it, onClose = { editing = null }) }
+        }
     }
 }
+
+private val LocationSaver = listSaver<Location?, String>(
+    save = { location -> listOfNotNull(location?.fsId, location?.path) },
+    restore = { saved -> saved.takeIf { it.size == 2 }?.let { Location(it[0], it[1]) } },
+)
