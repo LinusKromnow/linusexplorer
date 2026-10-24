@@ -147,6 +147,7 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
                 onBiometric = onBiometric,
             )
         }
+        is BrowserDialog.Properties -> PropertiesDialog(viewModel)
         is BrowserDialog.RestoreVault -> AlertDialog(
             onDismissRequest = viewModel::dismissDialog,
             title = { Text(stringResource(R.string.vault_restore_title)) },

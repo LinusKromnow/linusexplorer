@@ -55,6 +55,43 @@
         <item quantity="other">Showing only the first %d matches. Refine your search to see others.</item>
     </plurals>
 
+    <!-- Properties -->
+    <string name="action_properties">Properties</string>
+    <string name="action_close">Close</string>
+    <string name="action_stop">Stop</string>
+    <plurals name="properties_items">
+        <item quantity="one">%d item</item>
+        <item quantity="other">%d items</item>
+    </plurals>
+    <string name="properties_location">Location</string>
+    <string name="properties_various_folders">Several folders</string>
+    <string name="properties_type">Type</string>
+    <string name="properties_type_folder">Folder</string>
+    <string name="properties_type_folder_link">Folder (symbolic link)</string>
+    <string name="properties_type_link">%1$s (symbolic link)</string>
+    <string name="properties_size">Size</string>
+    <string name="properties_size_value">%1$s (%2$,d bytes)</string>
+    <string name="properties_contents">Contents</string>
+    <plurals name="properties_files">
+        <item quantity="one">%d file</item>
+        <item quantity="other">%d files</item>
+    </plurals>
+    <plurals name="properties_folders">
+        <item quantity="one">%d folder</item>
+        <item quantity="other">%d folders</item>
+    </plurals>
+    <string name="properties_unreadable">Folders that could not be read</string>
+    <string name="properties_modified">Modified</string>
+    <string name="properties_permissions">Permissions</string>
+    <string name="properties_readable">Readable</string>
+    <string name="properties_writable">Writable</string>
+    <string name="properties_executable">Executable</string>
+    <string name="properties_no_access">No access</string>
+    <string name="properties_checksums">Checksums</string>
+    <string name="properties_calculate">Calculate checksums</string>
+    <string name="properties_copy">Copy %1$s</string>
+    <string name="msg_checksum_copied">Checksum copied</string>
+
     <!-- Sorting -->
     <string name="sort_name">Name</string>
     <string name="sort_size">Size</string>
@@ -150,7 +187,6 @@
     <string name="app_lock_turn_off">Turn off</string>
     <string name="field_pin">PIN</string>
     <string name="field_pin_repeat">Repeat PIN</string>
-    <string name="action_close">Close</string>
     <string name="lock_title">LinusExplorer is locked</string>
     <string name="lock_enter_pin">Enter your PIN</string>
     <string name="lock_wrong_pin">Wrong PIN</string>

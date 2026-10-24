@@ -65,6 +65,8 @@ sealed interface BrowserDialog {
 
     /** [open] decrypts to a temporary copy and opens it instead of saving next to the original. */
     data class Decrypt(val entry: FileEntry, val open: Boolean, val wrongPassword: Boolean = false) : BrowserDialog
+    /** Details of [entries]; the changing parts live in [BrowserViewModel.properties]. */
+    data class Properties(val entries: List<FileEntry>) : BrowserDialog
     data object CreateVault : BrowserDialog
     data object ChangeVaultPassword : BrowserDialog
     data class RestoreVault(val entry: FileEntry) : BrowserDialog

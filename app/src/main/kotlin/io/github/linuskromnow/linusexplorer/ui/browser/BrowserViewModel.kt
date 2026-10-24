@@ -23,6 +23,8 @@ import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveWriter
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.fs.properties.Checksums
+import io.github.linuskromnow.linusexplorer.fs.properties.FolderSizer
 import io.github.linuskromnow.linusexplorer.fs.search.FileSearch
 import io.github.linuskromnow.linusexplorer.fs.search.NameMatcher
 import io.github.linuskromnow.linusexplorer.fs.search.SearchLimits
@@ -694,6 +696,107 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     // endregion
 
+    // region Properties
+
+    private val _properties = MutableStateFlow<PropertiesState?>(null)
+    val properties: StateFlow<PropertiesState?> = _properties.asStateFlow()
+    private var measureJob: Job? = null
+    private var hashJob: Job? = null
+
+    /** Properties of the selected items (also works on search results). */
+    fun requestProperties() {
+        val entries = _state.value.selectedEntries
+        if (entries.isNotEmpty()) showProperties(entries)
+    }
+
+    /** Properties of the folder being browsed. */
+    fun requestFolderProperties() {
+        val location = _state.value.location
+        viewModelScope.launch {
+            try {
+                showProperties(listOf(fileSystems[location.fsId].stat(location.path)))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                sendError(e)
+            }
+        }
+    }
+
+    private fun showProperties(entries: List<FileEntry>) {
+        val fsId = _state.value.location.fsId
+        endProperties()
+        _properties.value = PropertiesState(entries, fsId, measuring = entries.any { it.isDirectory })
+        showDialog(BrowserDialog.Properties(entries))
+        val fs = fileSystems[fsId]
+        measureJob = viewModelScope.launch {
+            if (fsId == LocalFileSystem.ID && entries.size == 1) {
+                val file = File(entries.single().path)
+                val access = withContext(Dispatchers.IO) { LocalAccess(file.canRead(), file.canWrite(), file.canExecute()) }
+                updateProperties { it.copy(access = access) }
+            }
+            if (entries.none { it.isDirectory }) return@launch
+            try {
+                val total = withContext(Dispatchers.IO) {
+                    FolderSizer.measure(fs, entries) { stats -> updateProperties { it.copy(stats = stats) } }
+                }
+                updateProperties { it.copy(stats = total, measuring = false) }
+            } catch (e: CancellationException) {
+                updateProperties { it.copy(measuring = false) }
+                throw e
+            } catch (e: Exception) {
+                updateProperties { it.copy(measuring = false, error = e.message ?: e.toString()) }
+            }
+        }
+    }
+
+    /** Stops the folder measurement (the numbers so far stay visible). */
+    fun cancelMeasure() {
+        measureJob?.cancel()
+    }
+
+    fun computeChecksums() {
+        val state = _properties.value ?: return
+        val entry = state.single?.takeIf { !it.isDirectory } ?: return
+        if (state.hashing) return
+        val fs = fileSystems[state.fsId]
+        updateProperties { it.copy(hashing = true, hashProgress = 0f, checksums = emptyMap(), error = null) }
+        hashJob = viewModelScope.launch {
+            try {
+                val sums = Checksums.compute(fs, entry.path) { read ->
+                    val fraction = if (entry.size > 0) (read.toFloat() / entry.size).coerceIn(0f, 1f) else 1f
+                    updateProperties { it.copy(hashProgress = fraction) }
+                }
+                updateProperties { it.copy(checksums = sums, hashing = false) }
+            } catch (e: CancellationException) {
+                updateProperties { it.copy(hashing = false) }
+                throw e
+            } catch (e: Exception) {
+                updateProperties { it.copy(hashing = false, error = e.message ?: e.toString()) }
+            }
+        }
+    }
+
+    fun cancelChecksums() {
+        hashJob?.cancel()
+    }
+
+    fun onChecksumCopied() {
+        _events.trySend(BrowserEvent.Message(R.string.msg_checksum_copied))
+    }
+
+    private fun updateProperties(transform: (PropertiesState) -> PropertiesState) {
+        _properties.update { it?.let(transform) }
+    }
+
+    private fun endProperties() {
+        measureJob?.cancel()
+        hashJob?.cancel()
+        _properties.value = null
+    }
+
+    // endregion
+
     // region Dialogs & file operations
 
     fun showDialog(dialog: BrowserDialog) {
@@ -702,6 +805,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     fun dismissDialog() {
         afterPassword = null
+        if (_state.value.dialog is BrowserDialog.Properties) endProperties()
         _state.update { it.copy(dialog = null) }
     }
 

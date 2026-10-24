@@ -374,6 +374,13 @@ private fun BrowserTopBar(
                     )
                 }
                 DropdownMenuItem(
+                    text = { Text(stringResource(R.string.action_properties)) },
+                    onClick = {
+                        overflowOpen = false
+                        viewModel.requestFolderProperties()
+                    },
+                )
+                DropdownMenuItem(
                     text = { Text(stringResource(R.string.action_refresh)) },
                     onClick = {
                         overflowOpen = false
@@ -533,6 +540,7 @@ private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel) 
                         add(MenuAction(R.string.action_edit, action = viewModel::editSelection))
                         add(MenuAction(R.string.action_open_with, action = viewModel::openSelectionExternally))
                     }
+                    add(MenuAction(R.string.action_properties, action = viewModel::requestProperties))
                     if (isLocal) {
                         add(MenuAction(R.string.action_share, enabled = selected.none { it.isDirectory }, viewModel::shareSelection))
                     }

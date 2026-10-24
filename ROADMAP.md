@@ -13,7 +13,7 @@
 - [x] Run transfers in a foreground service so they survive leaving the app; notification with progress
 - [x] Conflict dialog (replace / skip / keep both / merge folders, "apply to all")
 - [x] Image/video thumbnails (Coil) and APK icons
-- [ ] Grid view, search (recursive, by name), properties dialog (size of folder, checksums)
+- [x] Grid view, search (recursive, by name), properties dialog (size of folder, checksums)
 - [ ] Bookmarks and recent folders; tabs or dual-pane on tablets
 - [ ] Settings screen (theme, default folder, confirmations)
 - [x] Archives: browse and extract zip, 7z, tar(.gz/.bz2/.xz), gz/bz2/xz; create zip/7z/tar*; AES-256 zip passwords

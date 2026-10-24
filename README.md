@@ -1,7 +1,7 @@
 # LinusExplorer
 
 A free, open-source Android file manager in the spirit of Amaze and Solid Explorer, with no ads, tracking or paid tiers.
-It covers local storage today, including archives, file encryption, an encrypted vault and a built-in text editor. Network (SFTP, FTP, SMB, WebDAV) and cloud storage are planned. See [ROADMAP.md](ROADMAP.md).
+It covers local storage today, including list and grid views, recursive search, file properties with checksums, archives, file encryption, an encrypted vault and a built-in text editor. Network (SFTP, FTP, SMB, WebDAV) and cloud storage are planned. See [ROADMAP.md](ROADMAP.md).
 
 ## Building
 
@@ -20,7 +20,9 @@ Or open the folder in Android Studio and press Run.
 ```
 app/src/main/kotlin/io/github/linuskromnow/linusexplorer/
 ├── fs/            Storage-agnostic core: VirtualFileSystem, paths, sorting, copy/move engine
-│   └── local/     Device storage backend
+│   ├── local/     Device storage backend
+│   ├── search/    Tree walker and recursive name search, working on any backend
+│   └── properties/ Folder size aggregation and streaming checksums
 ├── storage/       Android storage volumes and the "All files access" permission
 ├── data/          User preferences (DataStore)
 ├── thumbnails/    Image, video and APK thumbnails for the file list (Coil, no network module)
