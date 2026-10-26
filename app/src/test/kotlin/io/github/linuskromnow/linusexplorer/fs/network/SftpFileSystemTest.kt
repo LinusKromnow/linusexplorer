@@ -130,6 +130,10 @@ class SftpFileSystemTest {
         transfer.run(listOf(Location(sftp.id, "/big.bin")), Location("back", "/"), move = false) {}
         assertArrayEquals(big, back.openInput("/big.bin").readBytes())
 
+        // Partial reads, as used to browse ZIPs on the server; the second one runs past the end.
+        assertArrayEquals(big.copyOfRange(1_000_000, 1_065_536), sftp.readRange("/big.bin", 1_000_000, 65_536))
+        assertArrayEquals(big.copyOfRange(big.size - 10, big.size), sftp.readRange("/big.bin", big.size - 10L, 100))
+
         sftp.createDirectory("/new")
         sftp.createFile("/new/empty.txt")
         sftp.rename("/new", "/renamed")

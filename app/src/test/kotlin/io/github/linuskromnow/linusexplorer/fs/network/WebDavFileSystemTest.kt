@@ -2,6 +2,7 @@ package io.github.linuskromnow.linusexplorer.fs.network
 
 import io.github.linuskromnow.linusexplorer.fs.FsException
 import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
+import io.github.linuskromnow.linusexplorer.fs.RangeUnsupportedFsException
 import io.github.linuskromnow.linusexplorer.fs.network.webdav.WebDavFileSystem
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
@@ -53,6 +54,22 @@ class WebDavFileSystemTest {
   <d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat>
  </d:response>
 </d:multistatus>"""
+
+    @Test
+    fun rangeReadsAskForPartialContent() = runTest {
+        server.enqueue(MockResponse.Builder().code(206).body("WORLD").build())
+        assertEquals("WORLD", String(dav().readRange("/Docs/a.txt", 6, 5)))
+        assertEquals("bytes=6-10", server.takeRequest().headers["Range"])
+
+        // A server that ignores Range sends the whole file with 200; that must not be taken as the range.
+        server.enqueue(MockResponse.Builder().code(200).body("HELLO WORLD").build())
+        try {
+            dav().readRange("/Docs/a.txt", 6, 5)
+            fail("a full response was accepted as a range")
+        } catch (e: RangeUnsupportedFsException) {
+            // expected: the caller downloads the whole file instead
+        }
+    }
 
     @Test
     fun listsAndDecodesNames() = runTest {

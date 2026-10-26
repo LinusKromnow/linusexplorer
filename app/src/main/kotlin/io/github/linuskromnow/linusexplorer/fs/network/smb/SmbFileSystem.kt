@@ -19,6 +19,8 @@ import io.github.linuskromnow.linusexplorer.fs.FsException
 import io.github.linuskromnow.linusexplorer.fs.NotFoundFsException
 import io.github.linuskromnow.linusexplorer.fs.PasswordProtected
 import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
+import io.github.linuskromnow.linusexplorer.fs.RangeReadable
+import io.github.linuskromnow.linusexplorer.fs.readFully
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
@@ -36,7 +38,7 @@ import java.util.EnumSet
 import java.util.concurrent.TimeUnit
 
 /** One SMB 2/3 share (Windows, Samba, NAS). "/" is the share's root. */
-class SmbFileSystem(private val connection: Connection) : VirtualFileSystem, PasswordProtected, Closeable {
+class SmbFileSystem(private val connection: Connection) : VirtualFileSystem, PasswordProtected, RangeReadable, Closeable {
     override val id = connection.fsId
     override val displayName = connection.label
     override val rootPath = VfsPaths.ROOT
@@ -129,6 +131,13 @@ class SmbFileSystem(private val connection: Connection) : VirtualFileSystem, Pas
                 }
             }
         }
+    }
+
+    override suspend fun readRange(path: String, offset: Long, length: Int): ByteArray = call(path, retry = true) { share ->
+        share.openFile(
+            smbPath(path), EnumSet.of(AccessMask.GENERIC_READ), null, SMB2ShareAccess.ALL,
+            SMB2CreateDisposition.FILE_OPEN, null,
+        ).use { file -> readFully(length) { buffer, done, wanted -> file.read(buffer, offset + done, done, wanted) } }
     }
 
     override suspend fun openOutput(path: String): OutputStream = call(path) { share ->

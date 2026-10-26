@@ -19,6 +19,8 @@ import java.io.FileInputStream
 import java.io.FilterInputStream
 import java.io.IOException
 import java.io.InputStream
+import java.nio.channels.SeekableByteChannel
+import org.apache.commons.compress.archivers.zip.ZipFile as CommonsZipFile
 
 /** One raw entry as stored in an archive; [name] is the archive's own (relative) path. */
 internal data class RawEntry(
@@ -52,6 +54,61 @@ internal interface ArchiveReader {
         private fun gunzip(input: InputStream): InputStream = GzipCompressorInputStream(input, true)
         private fun bunzip2(input: InputStream): InputStream = BZip2CompressorInputStream(input, true)
         private fun unxz(input: InputStream): InputStream = XZCompressorInputStream(input, true)
+    }
+}
+
+/**
+ * An archive opened for browsing, kept open while it is being viewed so that opening one file
+ * doesn't re-read the whole table of contents.
+ */
+internal interface ArchiveHandle : Closeable {
+    fun list(): List<RawEntry>
+
+    /** The caller closes the returned stream; the handle stays open. */
+    fun open(name: String): InputStream
+}
+
+/** Formats without a reusable table of contents: each call opens the archive again. */
+internal class StatelessHandle(
+    private val reader: ArchiveReader,
+    private val file: File,
+    private val password: CharArray?,
+) : ArchiveHandle {
+    override fun list() = reader.list(file, password)
+    override fun open(name: String) = reader.open(file, password, name)
+    override fun close() = Unit
+}
+
+/**
+ * A ZIP read through Apache Commons Compress, which keeps the central directory in memory and
+ * reads entries by seeking, from a local file or a [RangeChannel] over the network. It can't
+ * decrypt; encrypted ZIPs on the device go through [ZipReader] (zip4j) instead.
+ */
+internal class SeekableZipHandle private constructor(private val zip: CommonsZipFile) : ArchiveHandle {
+    override fun list(): List<RawEntry> = zip.entries.asSequence().map {
+        RawEntry(it.name, it.isDirectory, it.size, it.time.coerceAtLeast(0), it.generalPurposeBit.usesEncryption())
+    }.toList()
+
+    override fun open(name: String): InputStream {
+        val entry = zip.getEntry(name) ?: throw NotFoundFsException(name)
+        if (entry.generalPurposeBit.usesEncryption()) throw PasswordRequiredFsException(null, wrongPassword = false)
+        val unsupported = FsException("“${entry.name.substringAfterLast('/')}” uses an unsupported ZIP compression method")
+        if (!zip.canReadEntryData(entry)) throw unsupported
+        return try {
+            zip.getInputStream(entry)
+        } catch (e: LinkageError) {
+            throw unsupported // e.g. Zstandard, whose optional library isn't bundled
+        }
+    }
+
+    override fun close() = zip.close()
+
+    companion object {
+        // Without ignoreLocalFileHeader, opening visits every entry's local header: that reads the
+        // whole ZIP over the network. With it, an entry's header is read when the entry is opened.
+        fun open(file: File) = SeekableZipHandle(CommonsZipFile.builder().setFile(file).setIgnoreLocalFileHeader(true).get())
+        fun open(channel: SeekableByteChannel) =
+            SeekableZipHandle(CommonsZipFile.builder().setSeekableByteChannel(channel).setIgnoreLocalFileHeader(true).get())
     }
 }
 

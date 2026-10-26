@@ -15,5 +15,9 @@
 -dontwarn org.ietf.jgss.**
 -dontwarn javax.el.**
 
+# Commons Compress can read Zstandard ZIP entries through the optional zstd-jni, which isn't
+# bundled; such (rare) entries are reported as unsupported instead.
+-dontwarn com.github.luben.zstd.**
+
 # libsu starts the root service by class name in a separate (root) process.
 -keep class * extends com.topjohnwu.superuser.ipc.RootService { <init>(); }

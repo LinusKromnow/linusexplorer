@@ -4,6 +4,7 @@ import io.github.linuskromnow.linusexplorer.fs.FsException
 import io.github.linuskromnow.linusexplorer.fs.NotFoundFsException
 import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
 import io.github.linuskromnow.linusexplorer.fs.network.s3.S3FileSystem
+import io.github.linuskromnow.linusexplorer.fs.RangeUnsupportedFsException
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
@@ -74,6 +75,24 @@ class S3FileSystemTest {
         val auth = first.headers["Authorization"]!!
         assertTrue(auth, auth.startsWith("AWS4-HMAC-SHA256 Credential=AKID/") && "/eu-central-1/s3/aws4_request" in auth)
         assertTrue(server.takeRequest().target.contains("continuation-token=tok%2B%2F%3D"))
+    }
+
+    @Test
+    fun rangeReadsAreSignedPartialGets() = runTest {
+        server.enqueue(MockResponse.Builder().code(206).body("WORLD").build())
+        assertEquals("WORLD", String(s3().readRange("/docs/a.txt", 6, 5)))
+        val request = server.takeRequest()
+        assertEquals("GET", request.method)
+        assertEquals("bytes=6-10", request.headers["Range"])
+        assertTrue(request.headers["Authorization"].orEmpty().contains("range"))
+
+        server.enqueue(MockResponse.Builder().code(200).body("HELLO WORLD").build())
+        try {
+            s3().readRange("/docs/a.txt", 6, 5)
+            fail("a full response was accepted as a range")
+        } catch (e: RangeUnsupportedFsException) {
+            // expected
+        }
     }
 
     @Test

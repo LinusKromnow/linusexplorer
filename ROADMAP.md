@@ -36,6 +36,7 @@ Each is a `VirtualFileSystem` plus a saved-connection entry (credentials in Andr
 | ✅ WebDAV         | OkHttp (hand-written client)   | Apache-2.0 |
 
 - [x] Open remote files via a cached copy
+- [x] Browse ZIPs on SFTP, SMB, WebDAV and S3 without downloading them (range reads; FTP and encrypted ZIPs still download)
 - [x] "Edit and upload back": changes another app saves to that copy are offered for upload (with a warning if the server copy changed too)
 
 ## v0.4+: cloud storage

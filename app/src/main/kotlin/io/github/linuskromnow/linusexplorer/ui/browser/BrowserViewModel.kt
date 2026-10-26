@@ -18,12 +18,15 @@ import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.fs.PasswordProtected
 import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
+import io.github.linuskromnow.linusexplorer.fs.RangeReadable
+import io.github.linuskromnow.linusexplorer.fs.RangeUnsupportedFsException
 import io.github.linuskromnow.linusexplorer.fs.TransferProgress
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.ViewMode
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
+import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveSource
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveWriter
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
@@ -453,25 +456,42 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     private fun openArchive(entry: FileEntry) {
         val location = _state.value.location
+        val id = ArchiveFileSystem.idFor(location.fsId, entry.path)
+        val existing = fileSystems.find(id) as? ArchiveFileSystem
+        // Reuse an open view (keeping its password and table of contents) unless the file changed.
+        if (existing != null && existing.isCurrent(entry) && (location.fsId == LocalFileSystem.ID || existing.source is ArchiveSource.Remote)) {
+            return navigateTo(Location(id, VfsPaths.ROOT))
+        }
         if (location.fsId == LocalFileSystem.ID) {
-            val archive = archiveFor(location.fsId, entry, File(entry.path))
+            val archive = registerArchive(id, ArchiveSource.Local(File(entry.path)), entry)
             navigateTo(Location(archive.id, VfsPaths.ROOT))
             return
         }
-        // Archives inside archives (or, later, on remote storage) are unpacked to the cache first.
+        val fs = fileSystems[location.fsId]
         runTransfer(TransferKind.OPEN, retry = { openArchive(entry) }) {
+            if (fs is RangeReadable && ArchiveFormat.detect(entry.name) == ArchiveFormat.ZIP) {
+                // Read just the ZIP's table of contents from the server; files come piece by piece when opened.
+                val size = fs.stat(entry.path).size
+                val archive = registerArchive(id, ArchiveSource.Remote(fs, entry.path, size, entry.lastModified), entry)
+                try {
+                    archive.list(VfsPaths.ROOT)
+                    navigateTo(Location(archive.id, VfsPaths.ROOT))
+                    return@runTransfer
+                } catch (e: RangeUnsupportedFsException) {
+                    archive.close() // e.g. an encrypted ZIP or a server ignoring Range: download it instead
+                }
+            }
+            // Other archives on servers, and archives inside archives, are unpacked to the cache first.
             val local = copyToCache(location, entry, onProgress)
-            val archive = archiveFor(location.fsId, entry, local)
+            val archive = registerArchive(id, ArchiveSource.Local(local), entry)
             navigateTo(Location(archive.id, VfsPaths.ROOT))
         }
     }
 
-    /** Reuses an already registered archive view (keeping its password) unless the file changed. */
-    private fun archiveFor(sourceFsId: String, entry: FileEntry, file: File): ArchiveFileSystem {
-        val id = ArchiveFileSystem.idFor(sourceFsId, entry.path)
-        val existing = fileSystems.find(id) as? ArchiveFileSystem
-        if (existing != null && existing.file == file && existing.isCurrent) return existing
-        return ArchiveFileSystem(id, file, ArchiveFormat.detect(entry.name)!!).also { fileSystems.register(it) }
+    /** Registers a fresh archive view, closing the one it replaces. */
+    private fun registerArchive(id: String, source: ArchiveSource, entry: FileEntry): ArchiveFileSystem {
+        (fileSystems.find(id) as? ArchiveFileSystem)?.close()
+        return ArchiveFileSystem(id, source, ArchiveFormat.detect(entry.name)!!).also { fileSystems.register(it) }
     }
 
     fun extractSelection() {
@@ -480,7 +500,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         if (ArchiveFormat.detect(entry.name) == null || location.fsId != LocalFileSystem.ID) return
         clearSelection()
         runTransfer(TransferKind.EXTRACT, retry = { retryExtract(entry) }) {
-            val archive = archiveFor(location.fsId, entry, File(entry.path))
+            val id = ArchiveFileSystem.idFor(location.fsId, entry.path)
+            val archive = (fileSystems.find(id) as? ArchiveFileSystem)?.takeIf { it.isCurrent(entry) }
+                ?: registerArchive(id, ArchiveSource.Local(File(entry.path)), entry)
             archive.verifyPassword()
             val fs = fileSystems[location.fsId]
             val parent = VfsPaths.parent(entry.path) ?: location.path

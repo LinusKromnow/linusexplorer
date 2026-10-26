@@ -7,6 +7,8 @@ import io.github.linuskromnow.linusexplorer.fs.FsException
 import io.github.linuskromnow.linusexplorer.fs.NotFoundFsException
 import io.github.linuskromnow.linusexplorer.fs.PasswordProtected
 import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
+import io.github.linuskromnow.linusexplorer.fs.RangeReadable
+import io.github.linuskromnow.linusexplorer.fs.readFully
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
@@ -43,7 +45,7 @@ import java.util.EnumSet
 class SftpFileSystem(
     private val connection: Connection,
     private val knownHosts: KnownHosts,
-) : VirtualFileSystem, PasswordProtected, Closeable {
+) : VirtualFileSystem, PasswordProtected, RangeReadable, Closeable {
     override val id = connection.fsId
     override val displayName = connection.label
     override val rootPath = VfsPaths.ROOT
@@ -111,6 +113,12 @@ class SftpFileSystem(
                     file.close()
                 }
             }
+        }
+    }
+
+    override suspend fun readRange(path: String, offset: Long, length: Int): ByteArray = call(path, retry = true) { client ->
+        client.open(path, EnumSet.of(OpenMode.READ)).use { file ->
+            readFully(length) { buffer, done, wanted -> file.read(offset + done, buffer, done, wanted) }
         }
     }
 

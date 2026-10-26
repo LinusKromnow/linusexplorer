@@ -69,6 +69,36 @@ class PasswordRequiredFsException(
     cause: Throwable? = null,
 ) : FsException(if (wrongPassword) "Wrong password" else "Password required", cause)
 
+/**
+ * A file system that can read part of a file without transferring the rest (SFTP and SMB offsets,
+ * HTTP Range requests). Lets ZIPs on a server be browsed without downloading them first.
+ */
+interface RangeReadable {
+    /**
+     * Reads up to [length] bytes of [path] starting at [offset]; fewer only at the end of the file.
+     * Throws [RangeUnsupportedFsException] if this particular server can't do it.
+     */
+    suspend fun readRange(path: String, offset: Long, length: Int): ByteArray
+}
+
+/**
+ * Builds a [RangeReadable.readRange] result: calls [read] (buffer, bytes so far, bytes wanted) until
+ * [length] bytes are in or it reports the end of the file with -1 or 0.
+ */
+inline fun readFully(length: Int, read: (buffer: ByteArray, done: Int, wanted: Int) -> Int): ByteArray {
+    val buffer = ByteArray(length)
+    var done = 0
+    while (done < length) {
+        val count = read(buffer, done, length - done)
+        if (count <= 0) break
+        done += count
+    }
+    return if (done == length) buffer else buffer.copyOf(done)
+}
+
+/** The server ignored a range request; callers fall back to reading the whole file. */
+class RangeUnsupportedFsException(message: String = "Partial reads are not supported here") : FsException(message)
+
 /** A file system whose contents can only be read after [setPassword]. */
 interface PasswordProtected {
     fun setPassword(password: CharArray)

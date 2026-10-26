@@ -7,6 +7,8 @@ import io.github.linuskromnow.linusexplorer.fs.FsException
 import io.github.linuskromnow.linusexplorer.fs.NotFoundFsException
 import io.github.linuskromnow.linusexplorer.fs.PasswordProtected
 import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
+import io.github.linuskromnow.linusexplorer.fs.RangeReadable
+import io.github.linuskromnow.linusexplorer.fs.RangeUnsupportedFsException
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
@@ -39,7 +41,7 @@ class S3FileSystem(
     private val connection: Connection,
     private val knownHosts: KnownHosts,
     baseClient: OkHttpClient = OkHttpClient(),
-) : VirtualFileSystem, PasswordProtected {
+) : VirtualFileSystem, PasswordProtected, RangeReadable {
     override val id = connection.fsId
     override val displayName = connection.label.takeIf { connection.name.isNotBlank() } ?: connection.share
     override val rootPath = VfsPaths.ROOT
@@ -131,6 +133,13 @@ class S3FileSystem(
         val response = call("GET", keyOf(path))
         object : FilterInputStream(response.body.byteStream()) {
             override fun close() = response.close()
+        }
+    }
+
+    override suspend fun readRange(path: String, offset: Long, length: Int): ByteArray = io(path) {
+        call("GET", keyOf(path), extraHeaders = mapOf("range" to "bytes=$offset-${offset + length - 1}")).use { response ->
+            if (response.code != 206) throw RangeUnsupportedFsException() // a 200 would be the whole object
+            response.body.bytes()
         }
     }
 
