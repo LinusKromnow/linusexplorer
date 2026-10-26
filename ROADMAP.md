@@ -14,7 +14,8 @@
 - [x] Conflict dialog (replace / skip / keep both / merge folders, "apply to all")
 - [x] Image/video thumbnails (Coil) and APK icons
 - [x] Grid view, search (recursive, by name), properties dialog (size of folder, checksums)
-- [ ] Bookmarks and recent folders; tabs or dual-pane on tablets
+- [x] Bookmarks and recent folders (local and network, never vault or archive paths)
+- [ ] Tabs or dual-pane on tablets
 - [x] Settings screen (theme, dynamic colors, view, files, app lock, about)
 - [x] Archives: browse and extract zip, 7z, tar(.gz/.bz2/.xz), gz/bz2/xz; create zip/7z/tar*; AES-256 zip passwords
 - [ ] RAR: only possible via the non-free UnRAR license (junrar); needs a licensing decision

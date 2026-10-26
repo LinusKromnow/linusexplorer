@@ -1,6 +1,7 @@
 package io.github.linuskromnow.linusexplorer.ui.browser
 
 import android.content.res.Resources
+import io.github.linuskromnow.linusexplorer.data.Bookmark
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.Location
@@ -33,8 +34,12 @@ data class BrowserUiState(
     val search: SearchState? = null,
     /** Saved network connections, shown in the drawer. */
     val connections: List<Connection> = emptyList(),
+    val bookmarks: List<Bookmark> = emptyList(),
+    /** Most recent first. */
+    val recents: List<Location> = emptyList(),
 ) {
     val inSelectionMode: Boolean get() = selection.isNotEmpty()
+    val isBookmarked: Boolean get() = bookmarks.any { it.location == location }
     val inVault: Boolean get() = location.fsId == VaultFileSystem.ID
     /** What the user currently sees: the search results while searching, else the folder content. */
     val visibleEntries: List<FileEntry> get() = search?.results?.map { it.entry } ?: entries
@@ -54,6 +59,9 @@ data class SearchState(
 )
 
 data class Breadcrumb(val label: String, val path: String)
+
+/** How a bookmarked or recent folder is shown: its name, and where it lives. */
+data class FolderLabel(val title: String, val subtitle: String)
 
 data class Clipboard(val items: List<Location>, val isCut: Boolean)
 

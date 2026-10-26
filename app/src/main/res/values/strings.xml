@@ -6,6 +6,13 @@
     <string name="place_root">Root</string>
     <string name="drawer_storage">Storage</string>
     <string name="drawer_folders">Folders</string>
+    <string name="drawer_bookmarks">Bookmarks</string>
+    <string name="drawer_recent">Recent</string>
+    <string name="action_clear_recent">Clear recent folders</string>
+    <string name="action_add_bookmark">Bookmark this folder</string>
+    <string name="action_remove_bookmark">Remove bookmark</string>
+    <string name="msg_bookmark_added">Bookmarked “%1$s”</string>
+    <string name="msg_bookmark_removed">Removed bookmark “%1$s”</string>
 
     <!-- Actions -->
     <string name="action_open_drawer">Open navigation</string>

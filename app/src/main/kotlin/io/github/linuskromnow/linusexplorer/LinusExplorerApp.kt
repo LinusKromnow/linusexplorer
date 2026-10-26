@@ -5,6 +5,7 @@ import android.content.Context
 import coil3.ImageLoader
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import io.github.linuskromnow.linusexplorer.data.SavedFolders
 import io.github.linuskromnow.linusexplorer.data.UserPreferences
 import io.github.linuskromnow.linusexplorer.fs.FileSystemRegistry
 import io.github.linuskromnow.linusexplorer.fs.FileTransfer
@@ -55,6 +56,7 @@ class AppContainer(context: Context) {
     ).also { network -> fileSystems.resolver = network::resolve }
     val fileTransfer = FileTransfer(fileSystems)
     val preferences = UserPreferences(context)
+    val savedFolders = SavedFolders(File(context.filesDir, "saved_folders.bin"))
     val tasks = TaskManager(context.applicationContext)
 
     /**

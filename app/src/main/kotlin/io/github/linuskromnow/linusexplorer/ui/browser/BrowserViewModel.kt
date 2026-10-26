@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import io.github.linuskromnow.linusexplorer.LinusExplorerApp
 import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.crypto.AgeNoMatchException
+import io.github.linuskromnow.linusexplorer.data.Bookmark
+import io.github.linuskromnow.linusexplorer.data.SavedFolders
 import io.github.linuskromnow.linusexplorer.editor.TextFiles
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEncryption
@@ -59,6 +61,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val fileSystems = container.fileSystems
     private val fileTransfer = container.fileTransfer
     private val preferences = container.preferences
+    private val savedFolders = container.savedFolders
     val imageLoader = container.imageLoader
 
     private val _state = MutableStateFlow(
@@ -97,6 +100,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         onVaultBiometricChanged()
         viewModelScope.launch {
             network.store.connections.collect { list -> _state.update { it.copy(connections = list) } }
+        }
+        viewModelScope.launch {
+            savedFolders.data.collect { data -> _state.update { it.copy(bookmarks = data.bookmarks, recents = data.recents) } }
         }
         viewModelScope.launch {
             preferences.browser.collect { prefs ->
@@ -180,6 +186,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                         isLoading = false,
                     )
                 }
+                recordVisit(location)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -193,7 +200,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     private fun breadcrumbsFor(location: Location, places: List<Place>): List<Breadcrumb> {
         val base = if (location.fsId != LocalFileSystem.ID) {
-            Breadcrumb(fileSystems.find(location.fsId)?.displayName ?: location.fsId, VfsPaths.ROOT)
+            Breadcrumb(fsName(location.fsId), VfsPaths.ROOT)
         } else {
             places
                 .filter { it.isVolume && VfsPaths.isAncestorOrSelf(it.path, location.path) }
@@ -206,6 +213,58 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             current = VfsPaths.child(current, segment)
             Breadcrumb(segment, current)
         }
+    }
+
+    /** Also names saved connections that haven't been opened since the app started. */
+    private fun fsName(fsId: String): String =
+        fileSystems.find(fsId)?.displayName
+            ?: _state.value.connections.find { it.fsId == fsId }?.label
+            ?: fsId
+
+    // endregion
+
+    // region Bookmarks & recent folders
+
+    /** Bookmarks the folder being browsed, or removes its bookmark. */
+    fun toggleBookmark() {
+        val location = _state.value.location
+        if (!SavedFolders.canSave(location)) return
+        val name = describe(location).title
+        val bookmarked = _state.value.isBookmarked
+        val message = if (bookmarked) R.string.msg_bookmark_removed else R.string.msg_bookmark_added
+        updateSavedFolders(onDone = { _events.trySend(BrowserEvent.Message(message, listOf(name))) }) {
+            if (bookmarked) removeBookmark(location) else addBookmark(Bookmark(location, name))
+        }
+    }
+
+    fun removeBookmark(bookmark: Bookmark) = updateSavedFolders { removeBookmark(bookmark.location) }
+
+    fun clearRecents() = updateSavedFolders { clearRecents() }
+
+    /** Drawer volumes and shortcuts are one tap away already, so visiting them isn't worth a recent entry. */
+    private fun recordVisit(location: Location) {
+        if (location.fsId == LocalFileSystem.ID && _state.value.places.any { it.path == location.path }) return
+        updateSavedFolders { recordVisit(location) }
+    }
+
+    private fun updateSavedFolders(onDone: () -> Unit = {}, action: SavedFolders.() -> Unit) {
+        viewModelScope.launch {
+            try {
+                withContext(Dispatchers.IO) { savedFolders.action() }
+                onDone()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                sendError(e)
+            }
+        }
+    }
+
+    /** Title and "where is it" line for a bookmarked or recent folder. */
+    fun describe(location: Location): FolderLabel {
+        val crumbs = breadcrumbsFor(location, _state.value.places)
+        val title = if (crumbs.size == 1) crumbs.single().label else VfsPaths.name(location.path)
+        return FolderLabel(title, subtitle = crumbs.dropLast(1).joinToString(" › ") { it.label })
     }
 
     // endregion
@@ -563,7 +622,10 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun deleteConnection(connection: Connection) {
         _state.update { it.copy(dialog = null) }
         viewModelScope.launch {
-            withContext(Dispatchers.IO) { network.remove(connection) }
+            withContext(Dispatchers.IO) {
+                network.remove(connection)
+                savedFolders.forget(connection.fsId)
+            }
             history.removeAll { it.fsId == connection.fsId }
             if (_state.value.location.fsId == connection.fsId) show(Location(LocalFileSystem.ID, Places.primaryStoragePath()))
         }

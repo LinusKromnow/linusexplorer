@@ -27,6 +27,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
+import io.github.linuskromnow.linusexplorer.data.SavedFolders
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
@@ -192,6 +195,16 @@ fun BrowserScreen(
                     onOpenSettings()
                     scope.launch { drawerState.close() }
                 },
+                bookmarks = state.bookmarks,
+                recents = state.recents,
+                currentLocation = state.location,
+                describe = viewModel::describe,
+                onFolderClick = { location ->
+                    viewModel.navigateTo(location)
+                    scope.launch { drawerState.close() }
+                },
+                onRemoveBookmark = viewModel::removeBookmark,
+                onClearRecents = viewModel::clearRecents,
             )
         },
     ) {
@@ -208,6 +221,7 @@ fun BrowserScreen(
                         prefs = state.prefs,
                         readOnly = state.readOnly,
                         inVault = state.inVault,
+                        bookmarked = state.isBookmarked.takeIf { SavedFolders.canSave(state.location) },
                         vaultBiometric = state.vaultBiometric.takeIf { viewModel.vaultBiometrics.isAvailable(context) },
                         onToggleVaultBiometric = {
                             val activity = context.findFragmentActivity()
@@ -301,6 +315,8 @@ private fun BrowserTopBar(
     prefs: BrowserPrefs,
     readOnly: Boolean,
     inVault: Boolean,
+    /** Whether the folder is bookmarked; null where bookmarks aren't possible (vault, archives). */
+    bookmarked: Boolean?,
     /** Fingerprint unlock state for the vault; null when the device has no strong biometrics. */
     vaultBiometric: Boolean?,
     onToggleVaultBiometric: () -> Unit,
@@ -368,6 +384,16 @@ private fun BrowserTopBar(
                         onClick = {
                             overflowOpen = false
                             viewModel.showDialog(BrowserDialog.NewFile)
+                        },
+                    )
+                }
+                if (bookmarked != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark)) },
+                        leadingIcon = { Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, contentDescription = null) },
+                        onClick = {
+                            overflowOpen = false
+                            viewModel.toggleBookmark()
                         },
                     )
                 }

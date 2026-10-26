@@ -1,7 +1,15 @@
 package io.github.linuskromnow.linusexplorer.ui.browser
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.ClearAll
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.History
+import androidx.compose.ui.Alignment
+import io.github.linuskromnow.linusexplorer.data.Bookmark
+import io.github.linuskromnow.linusexplorer.fs.Location
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -44,6 +52,13 @@ fun PlacesDrawer(
     onConnectionClick: (Connection) -> Unit,
     onEditConnection: (Connection?) -> Unit,
     onSettingsClick: () -> Unit,
+    bookmarks: List<Bookmark>,
+    recents: List<Location>,
+    currentLocation: Location,
+    describe: (Location) -> FolderLabel,
+    onFolderClick: (Location) -> Unit,
+    onRemoveBookmark: (Bookmark) -> Unit,
+    onClearRecents: () -> Unit,
 ) {
     ModalDrawerSheet {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -61,6 +76,39 @@ fun PlacesDrawer(
                 onClick = onVaultClick,
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
             )
+
+            if (bookmarks.isNotEmpty()) {
+                HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
+                SectionHeader(stringResource(R.string.drawer_bookmarks))
+                bookmarks.forEach { bookmark ->
+                    FolderItem(
+                        label = describe(bookmark.location).copy(title = bookmark.name),
+                        icon = Icons.Default.Bookmark,
+                        selected = bookmark.location == currentLocation,
+                        onClick = { onFolderClick(bookmark.location) },
+                        badge = {
+                            IconButton(onClick = { onRemoveBookmark(bookmark) }) {
+                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_remove_bookmark))
+                            }
+                        },
+                    )
+                }
+            }
+
+            // The folder on screen is always the newest entry; listing it would only repeat the title bar.
+            val otherRecents = recents.filter { it != currentLocation }.take(MAX_RECENTS_SHOWN)
+            if (otherRecents.isNotEmpty()) {
+                HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SectionHeader(stringResource(R.string.drawer_recent), Modifier.weight(1f))
+                    IconButton(onClick = onClearRecents, modifier = Modifier.padding(end = 16.dp)) {
+                        Icon(Icons.Default.ClearAll, contentDescription = stringResource(R.string.action_clear_recent))
+                    }
+                }
+                otherRecents.forEach { location ->
+                    FolderItem(describe(location), Icons.Default.History, selected = false, onClick = { onFolderClick(location) })
+                }
+            }
 
             HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
             SectionHeader(stringResource(R.string.drawer_network))
@@ -105,13 +153,46 @@ fun PlacesDrawer(
     }
 }
 
+private const val MAX_RECENTS_SHOWN = 5
+
 @Composable
-private fun SectionHeader(text: String) {
+private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
         style = MaterialTheme.typography.titleSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
+        modifier = modifier.padding(horizontal = 28.dp, vertical = 12.dp),
+    )
+}
+
+@Composable
+private fun FolderItem(
+    label: FolderLabel,
+    icon: ImageVector,
+    selected: Boolean,
+    onClick: () -> Unit,
+    badge: (@Composable () -> Unit)? = null,
+) {
+    NavigationDrawerItem(
+        label = {
+            Column {
+                Text(label.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (label.subtitle.isNotEmpty()) {
+                    Text(
+                        label.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        },
+        icon = { Icon(icon, contentDescription = null) },
+        badge = badge,
+        selected = selected,
+        onClick = onClick,
+        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
     )
 }
 
