@@ -23,7 +23,7 @@
 - [x] Unlock the vault with fingerprint (Keystore-wrapped master key); vault backup & restore (.lxvault)
 - [x] Built-in text editor (line numbers, find/replace, undo/redo, encoding and line-ending aware, works in the vault)
 - [x] Recycle bin: per-volume hidden bin (instant moves), restore, delete forever, auto-purge after 30 days
-- [ ] Root access (optional, via libsu)
+- [x] Root access (optional, off by default; libsu root service, JitPack limited to its group)
 
 ## v0.3: network protocols
 Each is a `VirtualFileSystem` plus a saved-connection entry (credentials in Android Keystore-encrypted storage).

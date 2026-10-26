@@ -15,6 +15,8 @@ data class BrowserPrefs(
     val recycleBin: Boolean = true,
     /** Two browser panes side by side on wide screens. */
     val dualPane: Boolean = false,
+    /** Offer browsing the device with superuser rights (rooted phones only). */
+    val rootAccess: Boolean = false,
 )
 
 object FileSorting {

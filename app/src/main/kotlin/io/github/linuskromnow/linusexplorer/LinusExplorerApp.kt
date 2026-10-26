@@ -16,6 +16,7 @@ import io.github.linuskromnow.linusexplorer.data.UserPreferences
 import io.github.linuskromnow.linusexplorer.fs.FileSystemRegistry
 import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.fs.root.RootFileSystem
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
 import io.github.linuskromnow.linusexplorer.tasks.RemoteEdits
@@ -60,6 +61,7 @@ class AppContainer(context: Context) {
     val fileSystems = FileSystemRegistry().apply {
         register(LocalFileSystem())
         register(vault)
+        register(RootFileSystem(context))
     }
     val network = NetworkFileSystems(
         registry = fileSystems,

@@ -63,6 +63,7 @@ class UserPreferences(context: Context) {
             prefs[VIEW_MODE] = updated.viewMode.name
             prefs[RECYCLE_BIN] = updated.recycleBin
             prefs[DUAL_PANE] = updated.dualPane
+            prefs[ROOT_ACCESS] = updated.rootAccess
         }
     }
 
@@ -95,6 +96,7 @@ class UserPreferences(context: Context) {
             viewMode = this[VIEW_MODE]?.let { name -> ViewMode.entries.find { it.name == name } } ?: defaults.viewMode,
             recycleBin = this[RECYCLE_BIN] ?: defaults.recycleBin,
             dualPane = this[DUAL_PANE] ?: defaults.dualPane,
+            rootAccess = this[ROOT_ACCESS] ?: defaults.rootAccess,
         )
     }
 
@@ -128,6 +130,7 @@ class UserPreferences(context: Context) {
         val VIEW_MODE = stringPreferencesKey("view_mode")
         val RECYCLE_BIN = booleanPreferencesKey("recycle_bin")
         val DUAL_PANE = booleanPreferencesKey("dual_pane")
+        val ROOT_ACCESS = booleanPreferencesKey("root_access")
         val THEME = stringPreferencesKey("theme")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val EDITOR_WRAP = booleanPreferencesKey("editor_word_wrap")

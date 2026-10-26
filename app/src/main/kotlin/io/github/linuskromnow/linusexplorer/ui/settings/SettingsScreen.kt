@@ -126,6 +126,9 @@ fun SettingsScreen(
             SwitchRow(stringResource(R.string.settings_recycle_bin), stringResource(R.string.settings_recycle_bin_summary), browser.recycleBin) {
                 viewModel.updateBrowser { it.copy(recycleBin = !it.recycleBin) }
             }
+            SwitchRow(stringResource(R.string.settings_root_access), stringResource(R.string.settings_root_access_summary), browser.rootAccess) {
+                viewModel.updateBrowser { it.copy(rootAccess = !it.rootAccess) }
+            }
 
             Section(stringResource(R.string.settings_security))
             Row(

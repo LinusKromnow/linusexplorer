@@ -14,3 +14,6 @@
 }
 -dontwarn org.ietf.jgss.**
 -dontwarn javax.el.**
+
+# libsu starts the root service by class name in a separate (root) process.
+-keep class * extends com.topjohnwu.superuser.ipc.RootService { <init>(); }

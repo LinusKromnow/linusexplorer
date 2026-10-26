@@ -5,6 +5,7 @@
     <!-- Places -->
     <string name="place_root">Root</string>
     <string name="drawer_storage">Storage</string>
+    <string name="place_superuser">Root (superuser)</string>
     <string name="drawer_folders">Folders</string>
     <string name="drawer_bookmarks">Bookmarks</string>
     <string name="drawer_recent">Recent</string>
@@ -233,6 +234,8 @@
     <string name="settings_files">Files</string>
     <string name="settings_recycle_bin">Recycle bin</string>
     <string name="settings_recycle_bin_summary">Deleted files on this device can be restored for 30 days</string>
+    <string name="settings_root_access">Root access</string>
+    <string name="settings_root_access_summary">On rooted devices, adds “Root (superuser)” to the menu to browse and change system folders. Careful: mistakes there can break the system.</string>
     <string name="settings_security">Security</string>
     <string name="settings_on">On</string>
     <string name="settings_off">Off</string>

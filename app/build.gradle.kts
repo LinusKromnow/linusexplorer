@@ -85,6 +85,10 @@ dependencies {
     // Thumbnails. Deliberately no coil-network-*: the app has no network access.
     implementation(libs.coil.compose)
     implementation(libs.coil.video)
+    // Optional root access: a root process serves file access over Binder.
+    implementation(libs.libsu.core)
+    implementation(libs.libsu.service)
+    implementation(libs.libsu.nio)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)

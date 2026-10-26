@@ -11,10 +11,12 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.Alignment
 import io.github.linuskromnow.linusexplorer.data.Bookmark
 import io.github.linuskromnow.linusexplorer.fs.Location
+import io.github.linuskromnow.linusexplorer.fs.root.RootFileSystem
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
+import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Edit
@@ -62,6 +64,8 @@ fun PlacesDrawer(
     onClearRecents: () -> Unit,
     /** Null hides the entry (recycle bin switched off). */
     onRecycleBinClick: (() -> Unit)?,
+    /** Null hides the entry (root access switched off). */
+    onRootClick: (() -> Unit)?,
 ) {
     ModalDrawerSheet {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -79,6 +83,15 @@ fun PlacesDrawer(
                 onClick = onVaultClick,
                 modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
             )
+            if (onRootClick != null) {
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.place_superuser)) },
+                    icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = null) },
+                    selected = currentFsId == RootFileSystem.ID,
+                    onClick = onRootClick,
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                )
+            }
 
             if (bookmarks.isNotEmpty()) {
                 HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))

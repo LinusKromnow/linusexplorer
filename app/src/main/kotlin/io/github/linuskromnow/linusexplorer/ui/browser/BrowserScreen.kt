@@ -86,8 +86,10 @@ import io.github.linuskromnow.linusexplorer.fs.FileEncryption
 import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.fs.SortField
 import io.github.linuskromnow.linusexplorer.fs.ViewMode
+import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.fs.root.RootFileSystem
 import io.github.linuskromnow.linusexplorer.security.Biometrics
 import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
 import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
@@ -208,6 +210,14 @@ fun BrowserScreen(
                 onRecycleBinClick = if (state.prefs.recycleBin) {
                     {
                         onOpenRecycleBin()
+                        scope.launch { drawerState.close() }
+                    }
+                } else {
+                    null
+                },
+                onRootClick = if (state.prefs.rootAccess) {
+                    {
+                        viewModel.navigateTo(Location(RootFileSystem.ID, VfsPaths.ROOT))
                         scope.launch { drawerState.close() }
                     }
                 } else {

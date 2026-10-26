@@ -17,6 +17,10 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // libsu (root access) is only published on JitPack; nothing else may come from there.
+        maven("https://jitpack.io") {
+            content { includeGroup("com.github.topjohnwu.libsu") }
+        }
     }
 }
 
