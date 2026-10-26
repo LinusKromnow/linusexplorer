@@ -15,6 +15,19 @@ Requirements: JDK 17 and the Android SDK (Android Studio installs both).
 
 Or open the folder in Android Studio and press Run.
 
+## Releasing
+
+1. Bump `versionName` and `versionCode` in `app/build.gradle.kts` (code = major * 10000 + minor * 100 + patch)
+   and add `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`.
+2. Commit, then tag and push: `git tag -a v0.3.1 -m "LinusExplorer 0.3.1" && git push origin main v0.3.1`.
+3. The *Release* workflow builds the APK, signs it with the key from the repository secrets and publishes a
+   GitHub release. F-Droid picks up the tag, rebuilds it and ships it with the same signature, since the
+   build is reproducible.
+
+The release key is kept outside the repository. To sign a local release build, point
+`LINUSEXPLORER_KEYSTORE_PROPERTIES` at a `keystore.properties` with `storeFile`, `storePassword`, `keyAlias`
+and `keyPassword`. Without it, `assembleRelease` produces an unsigned APK.
+
 ## Project layout
 
 ```

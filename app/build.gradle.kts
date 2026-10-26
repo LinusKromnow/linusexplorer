@@ -1,4 +1,26 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+/**
+ * Release signing, only where the key exists: locally via a keystore.properties file (path in the
+ * LINUSEXPLORER_KEYSTORE_PROPERTIES environment variable, or ./keystore.properties), in CI via
+ * LINUSEXPLORER_KEYSTORE* variables. Everyone else, F-Droid's build server included, gets an
+ * unsigned release APK; F-Droid then checks it matches the signed one byte for byte.
+ */
+val releaseSigning: Properties? = run {
+    val env = System.getenv()
+    val file = (env["LINUSEXPLORER_KEYSTORE_PROPERTIES"] ?: rootProject.file("keystore.properties").path).let(::File)
+    when {
+        file.isFile -> Properties().apply { file.inputStream().use(::load) }
+        env["LINUSEXPLORER_KEYSTORE"] != null -> Properties().apply {
+            setProperty("storeFile", env.getValue("LINUSEXPLORER_KEYSTORE"))
+            setProperty("storePassword", env.getValue("LINUSEXPLORER_KEYSTORE_PASSWORD"))
+            setProperty("keyAlias", env.getValue("LINUSEXPLORER_KEY_ALIAS"))
+            setProperty("keyPassword", env.getValue("LINUSEXPLORER_KEY_PASSWORD"))
+        }
+        else -> null
+    }
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -13,12 +35,26 @@ android {
         applicationId = "io.github.linuskromnow.linusexplorer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 300 // major * 10000 + minor * 100 + patch
-        versionName = "0.3.0"
+        versionCode = 301 // major * 10000 + minor * 100 + patch
+        versionName = "0.3.1"
+    }
+
+    signingConfigs {
+        releaseSigning?.let { props ->
+            create("release") {
+                storeFile = File(props.getProperty("storeFile"))
+                storePassword = props.getProperty("storePassword")
+                keyAlias = props.getProperty("keyAlias")
+                keyPassword = props.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.findByName("release")
+            // Reproducible builds: no build-machine git metadata inside the APK.
+            vcsInfo.include = false
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
