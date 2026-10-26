@@ -31,6 +31,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
@@ -126,7 +127,8 @@ fun BrowserHost(
                 if (start != null) pendingStarts = pendingStarts - activeTab
             }
             // Per-tab UI state (search text, drawer, scroll) must not carry over to the next tab.
-            Box(modifier.onAnyTouch { rightFocused = false }) {
+            // Clipped: a closed drawer is parked just left of its pane and would otherwise show over its neighbour.
+            Box(modifier.clipToBounds().onAnyTouch { rightFocused = false }) {
                 key(activeTab) {
                     BrowserScreen(
                         onEditFile = onEditFile,
@@ -152,7 +154,7 @@ fun BrowserHost(
             Row(Modifier.fillMaxSize()) {
                 leftPane(Modifier.weight(1f).fillMaxHeight())
                 VerticalDivider()
-                Box(Modifier.weight(1f).fillMaxHeight().onAnyTouch { rightFocused = true }) {
+                Box(Modifier.weight(1f).fillMaxHeight().clipToBounds().onAnyTouch { rightFocused = true }) {
                     BrowserScreen(
                         onEditFile = onEditFile,
                         onOpenSettings = onOpenSettings,

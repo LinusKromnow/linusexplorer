@@ -156,6 +156,7 @@
         <item quantity="other">The recycle bin is empty. Deleted files stay here for %d days.</item>
     </plurals>
     <string name="msg_restored">Restored to %1$s</string>
+    <string name="time_just_now">Just now</string>
 
     <!-- Transfers -->
     <string name="transfer_copying">Copying</string>

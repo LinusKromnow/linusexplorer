@@ -48,6 +48,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.linuskromnow.linusexplorer.LinusExplorerApp
 import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
+import io.github.linuskromnow.linusexplorer.storage.Place
+import io.github.linuskromnow.linusexplorer.storage.Places
 import io.github.linuskromnow.linusexplorer.fs.trash.RecycleBin
 import io.github.linuskromnow.linusexplorer.fs.trash.TrashedItem
 import io.github.linuskromnow.linusexplorer.ui.browser.BrowserEvent
@@ -120,6 +122,8 @@ fun RecycleBinScreen(onBack: () -> Unit, viewModel: RecycleBinViewModel = viewMo
     val state by viewModel.state.collectAsStateWithLifecycle()
     val resources = LocalResources.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val volumes = remember { Places.volumes(context) }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { launch { snackbarHostState.showSnackbar(it.resolve(resources)) } }
     }
@@ -155,7 +159,7 @@ fun RecycleBinScreen(onBack: () -> Unit, viewModel: RecycleBinViewModel = viewMo
                 )
                 else -> LazyColumn(Modifier.fillMaxSize()) {
                     items(state.items, key = { it.id }) { item ->
-                        TrashedRow(item, onRestore = { viewModel.restore(item) }, onDelete = { viewModel.askDelete(item) })
+                        TrashedRow(item, volumes, onRestore = { viewModel.restore(item) }, onDelete = { viewModel.askDelete(item) })
                     }
                 }
             }
@@ -179,12 +183,17 @@ fun RecycleBinScreen(onBack: () -> Unit, viewModel: RecycleBinViewModel = viewMo
 }
 
 @Composable
-private fun TrashedRow(item: TrashedItem, onRestore: () -> Unit, onDelete: () -> Unit) {
+private fun TrashedRow(item: TrashedItem, volumes: List<Place>, onRestore: () -> Unit, onDelete: () -> Unit) {
     val context = LocalContext.current
-    val deleted = DateUtils.getRelativeTimeSpanString(item.deletedAt, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS)
+    val now = System.currentTimeMillis()
+    val deleted = if (now - item.deletedAt < DateUtils.MINUTE_IN_MILLIS) {
+        stringResource(R.string.time_just_now)
+    } else {
+        DateUtils.getRelativeTimeSpanString(item.deletedAt, now, DateUtils.MINUTE_IN_MILLIS).toString()
+    }
     val details = listOfNotNull(
-        VfsPaths.parent(item.originalPath),
-        deleted.toString(),
+        VfsPaths.parent(item.originalPath)?.let { folderLabel(it, volumes) },
+        deleted,
         Formatter.formatShortFileSize(context, item.size).takeIf { !item.isDirectory },
     ).joinToString(" · ")
     ListItem(
@@ -204,6 +213,12 @@ private fun TrashedRow(item: TrashedItem, onRestore: () -> Unit, onDelete: () ->
             }
         },
     )
+}
+
+/** "Internal shared storage › Documents" rather than "/storage/emulated/0/Documents". */
+private fun folderLabel(path: String, volumes: List<Place>): String {
+    val volume = volumes.filter { VfsPaths.isAncestorOrSelf(it.path, path) }.maxByOrNull { it.path.length } ?: return path
+    return (listOf(volume.label) + VfsPaths.relativeSegments(volume.path, path)).joinToString(" › ")
 }
 
 @Composable

@@ -27,8 +27,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.BookmarkBorder
 import io.github.linuskromnow.linusexplorer.data.SavedFolders
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -414,7 +412,6 @@ private fun BrowserTopBar(
                 if (bookmarked != null) {
                     DropdownMenuItem(
                         text = { Text(stringResource(if (bookmarked) R.string.action_remove_bookmark else R.string.action_add_bookmark)) },
-                        leadingIcon = { Icon(if (bookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder, contentDescription = null) },
                         onClick = {
                             overflowOpen = false
                             viewModel.toggleBookmark()

@@ -804,7 +804,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         runTransfer(TransferKind.OPEN, retry = { openViaCache(entry) }) {
             val local = copyToCache(location, entry, onProgress)
             if (Connection.connectionIdOf(location.fsId) != null) {
-                withContext(Dispatchers.IO) { remoteEdits.track(Location(location.fsId, entry.path), local, entry.lastModified) }
+                // Same source as the later check: listings and single-file lookups can differ in precision (FTP).
+                val remoteModified = remoteModified(location.fsId, entry.path)
+                withContext(Dispatchers.IO) { remoteEdits.track(Location(location.fsId, entry.path), local, remoteModified) }
             }
             _events.trySend(BrowserEvent.OpenFile(local.path))
         }
@@ -816,13 +818,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun checkRemoteEdits() {
         viewModelScope.launch {
             val edit = withContext(Dispatchers.IO) { remoteEdits.changed().firstOrNull() } ?: return@launch
-            val remote = try {
-                fileSystems[edit.source.fsId].stat(edit.source.path).lastModified
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                0L // offline or deleted: the upload itself will tell
-            }
+            val remote = remoteModified(edit.source.fsId, edit.source.path) // 0 when offline: the upload itself will tell
             val remoteChanged = remote != 0L && edit.remoteModified != 0L && remote != edit.remoteModified
             if (_state.value.dialog == null && _state.value.transfer == null) {
                 showDialog(BrowserDialog.UploadChanges(edit, remoteChanged))
@@ -851,16 +847,19 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                     }
                 }
             }
-            val remoteModified = try {
-                fs.stat(edit.source.path).lastModified
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                0L
-            }
+            val remoteModified = remoteModified(edit.source.fsId, edit.source.path)
             withContext(Dispatchers.IO) { remoteEdits.markUploaded(edit, remoteModified) }
             _events.trySend(BrowserEvent.Message(R.string.msg_uploaded, listOf(edit.name)))
         }
+    }
+
+    /** The remote file's modification time from a single-file lookup, or 0 if it can't be read. */
+    private suspend fun remoteModified(fsId: String, path: String): Long = try {
+        fileSystems[fsId].stat(path).lastModified
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        0L
     }
 
     /** Throws the local changes away. */
