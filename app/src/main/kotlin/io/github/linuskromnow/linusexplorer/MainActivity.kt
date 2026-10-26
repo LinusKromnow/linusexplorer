@@ -31,7 +31,7 @@ import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.security.Biometrics
 import io.github.linuskromnow.linusexplorer.security.SecureWindow
 import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
-import io.github.linuskromnow.linusexplorer.ui.browser.BrowserScreen
+import io.github.linuskromnow.linusexplorer.ui.browser.BrowserHost
 import io.github.linuskromnow.linusexplorer.ui.editor.EditorScreen
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
 import io.github.linuskromnow.linusexplorer.ui.lock.LockScreen
@@ -107,11 +107,11 @@ private fun AppRoot(lockViewModel: AppLockViewModel = viewModel()) {
             // The editor is drawn over the browser instead of replacing it, so browser state and
             // the vault's background auto-lock keep working while a file is open.
             var editing by rememberSaveable(stateSaver = LocationSaver) { mutableStateOf<Location?>(null) }
-            BrowserScreen(
+            BrowserHost(
                 onEditFile = { editing = it },
                 onOpenSettings = { showSettings = true },
                 onOpenRecycleBin = { showRecycleBin = true },
-                lockViewModel = lockViewModel,
+                appLocked = lock.enabled,
             )
             editing?.let { EditorScreen(location = it, onClose = { editing = null }) }
         }

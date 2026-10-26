@@ -62,6 +62,7 @@ class UserPreferences(context: Context) {
             prefs[SHOW_THUMBNAILS] = updated.showThumbnails
             prefs[VIEW_MODE] = updated.viewMode.name
             prefs[RECYCLE_BIN] = updated.recycleBin
+            prefs[DUAL_PANE] = updated.dualPane
         }
     }
 
@@ -93,6 +94,7 @@ class UserPreferences(context: Context) {
             showThumbnails = this[SHOW_THUMBNAILS] ?: defaults.showThumbnails,
             viewMode = this[VIEW_MODE]?.let { name -> ViewMode.entries.find { it.name == name } } ?: defaults.viewMode,
             recycleBin = this[RECYCLE_BIN] ?: defaults.recycleBin,
+            dualPane = this[DUAL_PANE] ?: defaults.dualPane,
         )
     }
 
@@ -125,6 +127,7 @@ class UserPreferences(context: Context) {
         val SHOW_THUMBNAILS = booleanPreferencesKey("show_thumbnails")
         val VIEW_MODE = stringPreferencesKey("view_mode")
         val RECYCLE_BIN = booleanPreferencesKey("recycle_bin")
+        val DUAL_PANE = booleanPreferencesKey("dual_pane")
         val THEME = stringPreferencesKey("theme")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val EDITOR_WRAP = booleanPreferencesKey("editor_word_wrap")

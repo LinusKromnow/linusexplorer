@@ -13,6 +13,8 @@ data class BrowserPrefs(
     val viewMode: ViewMode = ViewMode.LIST,
     /** Deleting local files moves them to the recycle bin first. */
     val recycleBin: Boolean = true,
+    /** Two browser panes side by side on wide screens. */
+    val dualPane: Boolean = false,
 )
 
 object FileSorting {

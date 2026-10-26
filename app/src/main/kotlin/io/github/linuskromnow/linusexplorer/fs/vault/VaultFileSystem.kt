@@ -13,6 +13,9 @@ import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -155,8 +158,16 @@ class VaultFileSystem(
         }
     }
 
+    private val _locks = MutableStateFlow(0)
+
+    /** Counts [lock] calls, so every open view of the vault can leave it. */
+    val locks: StateFlow<Int> = _locks.asStateFlow()
+
     /** Forgets the master key and the decrypted index. */
-    fun lock() = synchronized(lock) { lockLocked() }
+    fun lock() {
+        synchronized(lock) { lockLocked() }
+        _locks.value++
+    }
 
     /** Caller holds [lock]. */
     private fun lockLocked() {

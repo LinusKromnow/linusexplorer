@@ -24,6 +24,8 @@ import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailFetcher
 import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailKeyer
 import io.github.linuskromnow.linusexplorer.tasks.TransferService
 import io.github.linuskromnow.linusexplorer.ui.browser.BrowserViewModel
+import io.github.linuskromnow.linusexplorer.ui.browser.Clipboard
+import kotlinx.coroutines.flow.MutableStateFlow
 import io.github.linuskromnow.linusexplorer.fs.network.ConnectionStore
 import io.github.linuskromnow.linusexplorer.fs.network.KnownHosts
 import io.github.linuskromnow.linusexplorer.fs.network.NetworkFileSystems
@@ -70,6 +72,9 @@ class AppContainer(context: Context) {
     val recycleBin = RecycleBin(volumeRoots = { Places.volumes(context).map { it.path } })
     val tasks = TaskManager(context.applicationContext)
     val remoteEdits = RemoteEdits(File(context.filesDir, "remote_edits.bin"))
+
+    /** Shared by all tabs and panes, so files copied in one can be pasted in another. */
+    val clipboard = MutableStateFlow<Clipboard?>(null)
 
     /**
      * Thumbnail loader. No disk cache on purpose: the fetchers read local sources directly, and

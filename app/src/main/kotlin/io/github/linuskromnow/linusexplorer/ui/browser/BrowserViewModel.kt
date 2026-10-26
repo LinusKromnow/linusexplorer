@@ -66,6 +66,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val savedFolders = container.savedFolders
     private val recycleBin = container.recycleBin
     private val remoteEdits = container.remoteEdits
+    private val sharedClipboard = container.clipboard
     val imageLoader = container.imageLoader
 
     private val _state = MutableStateFlow(
@@ -97,7 +98,6 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
 
     /** Needed by the UI to turn fingerprint unlock on (it wraps the key behind a biometric prompt). */
     val vaultBiometrics = container.vaultBiometrics
-    private var backgroundSince: Long? = null
 
     init {
         refreshPlaces()
@@ -117,12 +117,30 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         viewModelScope.launch {
+            var running = false
             tasks.current.collect { transfer ->
                 _state.update { it.copy(transfer = transfer, transferHidden = transfer != null && it.transferHidden) }
+                // A task started in another tab or pane may have changed this folder too.
+                if (running && transfer == null) refresh()
+                running = transfer != null
             }
         }
+        viewModelScope.launch {
+            sharedClipboard.collect { clipboard -> _state.update { it.copy(clipboard = clipboard) } }
+        }
+        viewModelScope.launch {
+            vault.locks.drop(1).collect { leaveVault() }
+        }
         load()
-        checkRemoteEdits()
+    }
+
+    private var started = false
+
+    /** Opens [location] in a freshly created tab; later calls (e.g. after rotation) do nothing. */
+    fun startAt(location: Location?) {
+        if (started) return
+        started = true
+        if (location != null && location != _state.value.location) show(location)
     }
 
     // region Navigation
@@ -685,11 +703,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         imageLoader.memoryCache?.clear() // may hold decrypted vault thumbnails
         // Remote files being edited elsewhere aren't vault content; only the decrypted copies go.
         viewModelScope.launch(Dispatchers.IO) { remoteEdits.cleanCache(File(getApplication<Application>().cacheDir, OPEN_CACHE), keepUnchanged = true) }
-        if (_state.value.inVault) {
-            history.removeAll { it.fsId == VaultFileSystem.ID }
-            show(Location(LocalFileSystem.ID, Places.primaryStoragePath()))
-        }
         _events.trySend(BrowserEvent.Message(R.string.msg_vault_locked))
+    }
+
+    /** Runs in every tab and pane once the vault is locked, wherever that happened. */
+    private fun leaveVault() {
+        history.removeAll { it.fsId == VaultFileSystem.ID }
+        if (_state.value.inVault) show(Location(LocalFileSystem.ID, Places.primaryStoragePath()))
+        _state.update { it.copy(canGoBack = history.isNotEmpty()) }
     }
 
     fun moveSelectionToVault() {
@@ -711,16 +732,12 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         _events.trySend(BrowserEvent.Message(R.plurals.msg_moved_to_vault, listOf(count), count))
     }
 
-    /** Called when the app goes to the background; see [onAppForeground]. */
-    fun onAppBackground() {
-        backgroundSince = System.currentTimeMillis()
-    }
-
-    /** Auto-locks the vault after the app spent [VAULT_AUTO_LOCK_MS] in the background. */
-    fun onAppForeground() {
-        val since = backgroundSince ?: return
-        backgroundSince = null
-        if (System.currentTimeMillis() - since >= VAULT_AUTO_LOCK_MS) lockVault()
+    /**
+     * Called by [BrowserHost] (once for the whole app, not per tab) when the app is back after
+     * [awayMillis] in the background: auto-locks the vault after [VAULT_AUTO_LOCK_MS].
+     */
+    fun onAppForeground(awayMillis: Long) {
+        if (awayMillis >= VAULT_AUTO_LOCK_MS) lockVault()
         checkRemoteEdits() // the user may be back from editing a remote file in another app
     }
 
@@ -733,13 +750,14 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         if (cut && state.readOnly) return
         val items = state.selectedEntries.map { Location(state.location.fsId, it.path) }
         if (items.isEmpty()) return
-        _state.update { it.copy(clipboard = Clipboard(items, cut), selection = emptySet()) }
+        sharedClipboard.value = Clipboard(items, cut)
+        _state.update { it.copy(selection = emptySet()) }
         val message = if (cut) R.plurals.msg_cut_to_clipboard else R.plurals.msg_copied_to_clipboard
         _events.trySend(BrowserEvent.Message(message, listOf(items.size), items.size))
     }
 
     fun clearClipboard() {
-        _state.update { it.copy(clipboard = null) }
+        sharedClipboard.value = null
     }
 
     fun paste() {
@@ -751,7 +769,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
                 (fileSystems.find(fsId) as? ArchiveFileSystem)?.verifyPassword()
             }
             val count = fileTransfer.run(clipboard.items, target, clipboard.isCut, conflicts, onProgress)
-            if (clipboard.isCut) _state.update { it.copy(clipboard = null) }
+            if (clipboard.isCut) sharedClipboard.value = null
             val message = if (clipboard.isCut) R.plurals.msg_moved else R.plurals.msg_copied
             _events.trySend(BrowserEvent.Message(message, listOf(count), count))
         }
@@ -795,7 +813,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     // region Uploading edits of remote files
 
     /** Offers the next locally edited remote file for upload, unless something else is on screen. */
-    private fun checkRemoteEdits() {
+    fun checkRemoteEdits() {
         viewModelScope.launch {
             val edit = withContext(Dispatchers.IO) { remoteEdits.changed().firstOrNull() } ?: return@launch
             val remote = try {

@@ -78,7 +78,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.linuskromnow.linusexplorer.R
@@ -90,11 +89,9 @@ import io.github.linuskromnow.linusexplorer.fs.ViewMode
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.security.Biometrics
-import io.github.linuskromnow.linusexplorer.security.SecureWindow
 import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
 import io.github.linuskromnow.linusexplorer.security.findFragmentActivity
 import io.github.linuskromnow.linusexplorer.storage.StorageAccess
-import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
 import io.github.linuskromnow.linusexplorer.util.FileOpener
 import kotlinx.coroutines.launch
 
@@ -105,11 +102,17 @@ fun BrowserScreen(
     onOpenSettings: () -> Unit,
     onOpenRecycleBin: () -> Unit,
     viewModel: BrowserViewModel = viewModel(),
-    lockViewModel: AppLockViewModel = viewModel(),
+    /**
+     * The one pane that also owns app-wide things: the task dialogs, vault auto-lock and the
+     * upload prompt. Other panes would only show them twice.
+     */
+    isPrimary: Boolean = true,
+    /** Whether the back gesture belongs to this pane. */
+    isFocused: Boolean = true,
+    tabs: TabActions? = null,
+    tabStrip: @Composable () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val lockState by lockViewModel.state.collectAsStateWithLifecycle()
-    SecureWindow(lockState.enabled || state.inVault)
     val vaultPrompt = VaultBiometrics.Prompt(stringResource(R.string.vault_biometric_enable_title), stringResource(R.string.action_cancel))
     val context = LocalContext.current
     val resources = LocalResources.current
@@ -129,10 +132,6 @@ fun BrowserScreen(
         recheckAccess() // the user may have just returned from the All files access settings page
         viewModel.refreshPlaces()
         onPauseOrDispose { }
-    }
-    LifecycleStartEffect(Unit) {
-        viewModel.onAppForeground()
-        onStopOrDispose { viewModel.onAppBackground() }
     }
     val legacyPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
@@ -158,14 +157,14 @@ fun BrowserScreen(
         }
     }
 
-    BackHandler(enabled = state.inSelectionMode || state.search != null || state.canGoBack) {
+    BackHandler(enabled = isFocused && (state.inSelectionMode || state.search != null || state.canGoBack)) {
         when {
             state.inSelectionMode -> viewModel.clearSelection()
             state.search != null -> viewModel.closeSearch()
             else -> viewModel.navigateBack()
         }
     }
-    BackHandler(enabled = drawerState.isOpen) { scope.launch { drawerState.close() } }
+    BackHandler(enabled = isFocused && drawerState.isOpen) { scope.launch { drawerState.close() } }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -221,7 +220,7 @@ fun BrowserScreen(
         Scaffold(
             topBar = {
                 if (state.inSelectionMode) {
-                    SelectionTopBar(state, viewModel)
+                    SelectionTopBar(state, viewModel, tabs)
                 } else if (searchState != null) {
                     SearchTopBar(searchState.query, viewModel)
                 } else {
@@ -244,6 +243,8 @@ fun BrowserScreen(
                         },
                         onMenuClick = { scope.launch { drawerState.open() } },
                         viewModel = viewModel,
+                        location = state.location,
+                        tabs = tabs,
                     )
                 }
             },
@@ -261,8 +262,9 @@ fun BrowserScreen(
                     PermissionContent(onGrantClick = requestAccess)
                     return@Column
                 }
+                tabStrip()
                 BreadcrumbBar(state.breadcrumbs, onClick = { viewModel.navigateTo(it.path) })
-                val hiddenTransfer = state.transfer?.takeIf { state.transferHidden }
+                val hiddenTransfer = state.transfer?.takeIf { state.transferHidden && isPrimary }
                 if (hiddenTransfer != null) {
                     val progress = hiddenTransfer.progress
                     val modifier = Modifier.fillMaxWidth().clickable(onClick = viewModel::showTransfer)
@@ -296,6 +298,7 @@ fun BrowserScreen(
     }
 
     state.dialog?.let { BrowserDialogHost(it, viewModel) }
+    if (!isPrimary) return
     state.transfer?.let { transfer ->
         val conflict = transfer.conflict
         when {
@@ -331,6 +334,8 @@ private fun BrowserTopBar(
     onToggleVaultBiometric: () -> Unit,
     onMenuClick: () -> Unit,
     viewModel: BrowserViewModel,
+    location: Location,
+    tabs: TabActions?,
 ) {
     var sortMenuOpen by remember { mutableStateOf(false) }
     var overflowOpen by remember { mutableStateOf(false) }
@@ -420,6 +425,31 @@ private fun BrowserTopBar(
                         viewModel.refresh()
                     },
                 )
+                if (tabs != null) {
+                    HorizontalDivider()
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_new_tab)) },
+                        onClick = {
+                            overflowOpen = false
+                            tabs.onNewTab(location)
+                        },
+                    )
+                    tabs.onCloseTab?.let { close ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_close_tab)) },
+                            onClick = {
+                                overflowOpen = false
+                                close()
+                            },
+                        )
+                    }
+                    tabs.dualPane?.let { dual ->
+                        CheckableMenuItem(stringResource(R.string.action_dual_pane), dual) {
+                            overflowOpen = false
+                            tabs.onToggleDualPane()
+                        }
+                    }
+                }
                 if (inVault) {
                     DropdownMenuItem(
                         text = { Text(stringResource(R.string.action_change_vault_password)) },
@@ -527,7 +557,7 @@ private fun SearchContent(state: BrowserUiState, search: SearchState, viewModel:
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel) {
+private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel, tabs: TabActions?) {
     var overflowOpen by remember { mutableStateOf(false) }
     val selected = state.selectedEntries
     TopAppBar(
@@ -572,6 +602,14 @@ private fun SelectionTopBar(state: BrowserUiState, viewModel: BrowserViewModel) 
                     if (single != null && !single.isDirectory) {
                         add(MenuAction(R.string.action_edit, action = viewModel::editSelection))
                         add(MenuAction(R.string.action_open_with, action = viewModel::openSelectionExternally))
+                    }
+                    if (tabs != null && single != null && single.isDirectory) {
+                        add(
+                            MenuAction(R.string.action_open_in_new_tab) {
+                                viewModel.clearSelection()
+                                tabs.onNewTab(Location(state.location.fsId, single.path))
+                            },
+                        )
                     }
                     add(MenuAction(R.string.action_properties, action = viewModel::requestProperties))
                     if (isLocal) {

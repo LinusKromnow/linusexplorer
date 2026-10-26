@@ -135,6 +135,12 @@
     <string name="action_later">Later</string>
     <string name="msg_uploaded">Uploaded “%1$s”</string>
 
+    <!-- Tabs and panes -->
+    <string name="action_new_tab">New tab</string>
+    <string name="action_close_tab">Close tab</string>
+    <string name="action_open_in_new_tab">Open in new tab</string>
+    <string name="action_dual_pane">Dual pane</string>
+
     <!-- Recycle bin -->
     <string name="recycle_bin_title">Recycle bin</string>
     <string name="action_empty_bin">Empty recycle bin</string>
