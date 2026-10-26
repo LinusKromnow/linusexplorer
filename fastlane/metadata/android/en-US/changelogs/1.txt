@@ -1,1 +1,5 @@
-First release: local file browsing and management.
+First release.
+• Local files: copy, move, recycle bin, search, bookmarks, tabs and dual-pane, thumbnails, text editor
+• Network: SFTP, FTP/FTPS, SMB, WebDAV and S3, with upload of edited files
+• Archives (ZIP, 7z, tar), age file encryption, encrypted vault, app lock
+• Optional root access

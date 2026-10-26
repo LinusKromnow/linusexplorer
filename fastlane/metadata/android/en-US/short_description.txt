@@ -1,1 +1,1 @@
-Free, open-source file manager for local, network and cloud storage
+Free, open-source file manager for local storage, SFTP, SMB, WebDAV and S3

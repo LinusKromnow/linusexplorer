@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Themed-icon layer (Android 13+): only alpha counts, so the needle is cut out of the front. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillAlpha="0.5"
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M32,32h13.5a3,3 0,0 1,2.3 1.1L51.4,37.5H76a4,4 0,0 1,4 4V43H28V36a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M32,43H76a4,4 0,0 1,4 4V72a4,4 0,0 1,-4 4H32a4,4 0,0 1,-4 -4V47a4,4 0,0 1,4 -4zM63.2,49.3L44.8,68.7L50.5,55.5zM63.2,49.3L57.5,62.5L44.8,68.7z" />
+</vector>

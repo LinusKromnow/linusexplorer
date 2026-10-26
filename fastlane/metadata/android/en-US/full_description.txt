@@ -1,20 +1,32 @@
 LinusExplorer is a free and open-source file manager. No ads, no tracking, no paid features.
 
-<b>Features</b>
+<b>Files on your device</b>
 <ul>
-<li>Browse internal storage, SD cards and the root file system</li>
-<li>Copy, move, rename, delete and share files and folders</li>
-<li>Multi-select, natural sorting, hidden files toggle</li>
-<li>Open, extract and create ZIP, 7z and tar archives, including AES-256 password-protected ZIPs</li>
-<li>Encrypt single files with the open age format</li>
-<li>Private vault: an encrypted, password-protected folder hidden from other apps</li>
-<li>App lock with PIN or fingerprint</li>
-<li>Material You design with light and dark themes</li>
+<li>Browse internal storage, SD cards and the whole file system</li>
+<li>Copy, move, rename, delete and share files and folders; long copies keep running in the background with a progress notification</li>
+<li>Recycle bin: deleted files can be restored for 30 days</li>
+<li>List and grid views with image, video and APK thumbnails</li>
+<li>Recursive search with wildcards</li>
+<li>Bookmarks and recently visited folders</li>
+<li>Tabs, and two panes side by side on tablets and foldables</li>
+<li>Folder sizes and checksums (MD5, SHA-1, SHA-256) in the properties dialog</li>
+<li>Built-in text editor with find and replace, undo and line numbers</li>
+<li>Optional root access on rooted devices</li>
 </ul>
 
-<b>Coming soon</b>
+<b>Network storage</b>
 <ul>
-<li>SFTP, FTP/FTPS, SMB and WebDAV</li>
-<li>Cloud storage: Google Drive, Dropbox, OneDrive, Nextcloud, S3 and more</li>
-<li>Image thumbnails, search, bookmarks and tabs</li>
+<li>SFTP, FTP and FTPS, SMB 2/3 (Windows shares, Samba, NAS), WebDAV (Nextcloud, ownCloud) and S3-compatible storage (AWS, Backblaze B2, Cloudflare R2, Wasabi, MinIO)</li>
+<li>Saved connections are stored encrypted on the device</li>
+<li>Edit a remote file in any app and upload the changes back</li>
 </ul>
+
+<b>Archives and privacy</b>
+<ul>
+<li>Open, extract and create ZIP, 7z and tar archives, including AES-256 password-protected ZIPs</li>
+<li>Encrypt single files with the open age format</li>
+<li>Private vault: an encrypted folder, unlocked with a password or fingerprint, with backup and restore</li>
+<li>App lock with PIN or fingerprint</li>
+</ul>
+
+The app only goes online for servers you add yourself. Material You design with light and dark themes.
