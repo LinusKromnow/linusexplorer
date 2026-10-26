@@ -5,6 +5,7 @@ import io.github.linuskromnow.linusexplorer.data.Bookmark
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.Location
+import io.github.linuskromnow.linusexplorer.fs.ViewMode
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import io.github.linuskromnow.linusexplorer.fs.network.UntrustedHostKeyException
 import io.github.linuskromnow.linusexplorer.fs.search.SearchHit
@@ -23,6 +24,8 @@ data class BrowserUiState(
     val selection: Set<String> = emptySet(),
     val clipboard: Clipboard? = null,
     val prefs: BrowserPrefs = BrowserPrefs(),
+    /** This pane's own grid/list choice; [BrowserPrefs.viewMode] is only the default for new panes. */
+    val viewMode: ViewMode = prefs.viewMode,
     val places: List<Place> = emptyList(),
     val canGoBack: Boolean = false,
     val dialog: BrowserDialog? = null,

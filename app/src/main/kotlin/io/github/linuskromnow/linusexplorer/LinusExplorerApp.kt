@@ -26,6 +26,8 @@ import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailKeyer
 import io.github.linuskromnow.linusexplorer.tasks.TransferService
 import io.github.linuskromnow.linusexplorer.ui.browser.BrowserViewModel
 import io.github.linuskromnow.linusexplorer.ui.browser.Clipboard
+import io.github.linuskromnow.linusexplorer.fs.ViewMode
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import io.github.linuskromnow.linusexplorer.fs.network.ConnectionStore
 import io.github.linuskromnow.linusexplorer.fs.network.KnownHosts
@@ -77,6 +79,9 @@ class AppContainer(context: Context) {
 
     /** Shared by all tabs and panes, so files copied in one can be pasted in another. */
     val clipboard = MutableStateFlow<Clipboard?>(null)
+
+    /** Grid/list chosen in Settings, which (unlike a pane's own toggle) applies to every open pane. */
+    val viewModeForAll = MutableSharedFlow<ViewMode>(extraBufferCapacity = 1)
 
     /**
      * Thumbnail loader. No disk cache on purpose: the fetchers read local sources directly, and

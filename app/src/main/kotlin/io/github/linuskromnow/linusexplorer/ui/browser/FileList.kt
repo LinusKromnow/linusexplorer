@@ -86,7 +86,7 @@ import io.github.linuskromnow.linusexplorer.thumbnails.Thumbnails
 @Composable
 fun FileList(state: BrowserUiState, viewModel: BrowserViewModel) {
     val location = state.location
-    val grid = state.prefs.viewMode == ViewMode.GRID
+    val grid = state.viewMode == ViewMode.GRID
     fun thumbnailFor(entry: FileEntry) =
         if (state.prefs.showThumbnails) Thumbnails.sourceFor(location.fsId, entry) else null
 

@@ -235,6 +235,7 @@ fun BrowserScreen(
                     BrowserTopBar(
                         title = state.breadcrumbs.lastOrNull()?.label.orEmpty(),
                         prefs = state.prefs,
+                        viewMode = state.viewMode,
                         readOnly = state.readOnly,
                         inVault = state.inVault,
                         bookmarked = state.isBookmarked.takeIf { SavedFolders.canSave(state.location) },
@@ -333,6 +334,7 @@ fun BrowserScreen(
 private fun BrowserTopBar(
     title: String,
     prefs: BrowserPrefs,
+    viewMode: ViewMode,
     readOnly: Boolean,
     inVault: Boolean,
     /** Whether the folder is bookmarked; null where bookmarks aren't possible (vault, archives). */
@@ -358,8 +360,8 @@ private fun BrowserTopBar(
             IconButton(onClick = viewModel::openSearch) {
                 Icon(Icons.Default.Search, contentDescription = stringResource(R.string.action_search))
             }
-            val grid = prefs.viewMode == ViewMode.GRID
-            IconButton(onClick = { viewModel.updatePrefs { it.copy(viewMode = if (grid) ViewMode.LIST else ViewMode.GRID) } }) {
+            val grid = viewMode == ViewMode.GRID
+            IconButton(onClick = viewModel::toggleViewMode) {
                 Icon(
                     if (grid) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
                     contentDescription = stringResource(if (grid) R.string.action_list_view else R.string.action_grid_view),

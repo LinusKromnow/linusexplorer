@@ -55,12 +55,19 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
-    private val preferences = (application as LinusExplorerApp).container.preferences
+    private val container = (application as LinusExplorerApp).container
+    private val preferences = container.preferences
     val browser = preferences.browser.stateIn(viewModelScope, SharingStarted.Eagerly, BrowserPrefs())
     val appearance = preferences.appearance.stateIn(viewModelScope, SharingStarted.Eagerly, AppearancePrefs())
 
     fun updateBrowser(transform: (BrowserPrefs) -> BrowserPrefs) {
         viewModelScope.launch { preferences.updateBrowser(transform) }
+    }
+
+    /** Unlike the toggle in a pane, the Settings switch applies to every open pane. */
+    fun setViewModeForAll(mode: ViewMode) {
+        updateBrowser { it.copy(viewMode = mode) }
+        container.viewModeForAll.tryEmit(mode)
     }
 
     fun updateAppearance(transform: (AppearancePrefs) -> AppearancePrefs) {
@@ -111,7 +118,7 @@ fun SettingsScreen(
                 }
             }
             SwitchRow(stringResource(R.string.settings_grid_view), null, browser.viewMode == ViewMode.GRID) {
-                viewModel.updateBrowser { it.copy(viewMode = if (it.viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID) }
+                viewModel.setViewModeForAll(if (browser.viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID)
             }
             SwitchRow(stringResource(R.string.settings_thumbnails), stringResource(R.string.settings_thumbnails_summary), browser.showThumbnails) {
                 viewModel.updateBrowser { it.copy(showThumbnails = !it.showThumbnails) }

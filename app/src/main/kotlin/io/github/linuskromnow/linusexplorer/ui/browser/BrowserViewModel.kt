@@ -20,6 +20,7 @@ import io.github.linuskromnow.linusexplorer.fs.PasswordProtected
 import io.github.linuskromnow.linusexplorer.fs.PasswordRequiredFsException
 import io.github.linuskromnow.linusexplorer.fs.TransferProgress
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
+import io.github.linuskromnow.linusexplorer.fs.ViewMode
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFileSystem
 import io.github.linuskromnow.linusexplorer.fs.archive.ArchiveFormat
@@ -112,9 +113,18 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             savedFolders.data.collect { data -> _state.update { it.copy(bookmarks = data.bookmarks, recents = data.recents) } }
         }
         viewModelScope.launch {
+            var first = true
             preferences.browser.collect { prefs ->
-                _state.update { it.copy(prefs = prefs, entries = FileSorting.sort(unsortedEntries, prefs)) }
+                _state.update {
+                    // A new pane starts with the saved default; after that its view mode is its own.
+                    val viewMode = if (first) prefs.viewMode else it.viewMode
+                    it.copy(prefs = prefs, viewMode = viewMode, entries = FileSorting.sort(unsortedEntries, prefs))
+                }
+                first = false
             }
+        }
+        viewModelScope.launch {
+            container.viewModeForAll.collect { mode -> _state.update { it.copy(viewMode = mode) } }
         }
         viewModelScope.launch {
             var running = false
@@ -1065,6 +1075,13 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             val message = if (trashed == entries.size) R.plurals.msg_moved_to_bin else R.plurals.msg_deleted
             _events.trySend(BrowserEvent.Message(message, listOf(entries.size), entries.size))
         }
+    }
+
+    /** Switches only this pane, and remembers the choice for new panes and the next start. */
+    fun toggleViewMode() {
+        val mode = if (_state.value.viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID
+        _state.update { it.copy(viewMode = mode) }
+        updatePrefs { it.copy(viewMode = mode) }
     }
 
     fun updatePrefs(transform: (BrowserPrefs) -> BrowserPrefs) {
