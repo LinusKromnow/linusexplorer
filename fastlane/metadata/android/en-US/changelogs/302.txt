@@ -1,0 +1,2 @@
+• ZIPs on SFTP, SMB, WebDAV and S3 can be browsed without downloading them first; files inside are fetched when you open them
+• Very large ZIPs on the device open faster: the table of contents is read only once
