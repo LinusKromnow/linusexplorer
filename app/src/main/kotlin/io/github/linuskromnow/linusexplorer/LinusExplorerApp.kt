@@ -6,6 +6,12 @@ import coil3.ImageLoader
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
 import io.github.linuskromnow.linusexplorer.data.SavedFolders
+import io.github.linuskromnow.linusexplorer.fs.trash.RecycleBin
+import io.github.linuskromnow.linusexplorer.storage.Places
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import io.github.linuskromnow.linusexplorer.data.UserPreferences
 import io.github.linuskromnow.linusexplorer.fs.FileSystemRegistry
 import io.github.linuskromnow.linusexplorer.fs.FileTransfer
@@ -38,6 +44,8 @@ class LinusExplorerApp : Application() {
         TransferService.createChannel(this)
         // Files decrypted or unpacked for other apps only need to live until the next start.
         Thread { File(cacheDir, BrowserViewModel.OPEN_CACHE).deleteRecursively() }.start()
+        // Without storage access yet the bins just look empty, so this is safe on the very first start.
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { runCatching { container.recycleBin.purgeOlderThan() } }
     }
 }
 
@@ -57,6 +65,7 @@ class AppContainer(context: Context) {
     val fileTransfer = FileTransfer(fileSystems)
     val preferences = UserPreferences(context)
     val savedFolders = SavedFolders(File(context.filesDir, "saved_folders.bin"))
+    val recycleBin = RecycleBin(volumeRoots = { Places.volumes(context).map { it.path } })
     val tasks = TaskManager(context.applicationContext)
 
     /**

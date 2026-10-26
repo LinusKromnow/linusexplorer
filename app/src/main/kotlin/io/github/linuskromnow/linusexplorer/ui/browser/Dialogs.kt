@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.platform.LocalContext
 import io.github.linuskromnow.linusexplorer.R
+import io.github.linuskromnow.linusexplorer.fs.trash.RecycleBin
 import io.github.linuskromnow.linusexplorer.ui.connections.ConnectionDialog
 import io.github.linuskromnow.linusexplorer.ui.connections.TrustHostDialog
 import io.github.linuskromnow.linusexplorer.fs.ConflictResolution
@@ -82,7 +83,15 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
                             ?: pluralStringResource(R.plurals.delete_many_title, entries.size, entries.size),
                     )
                 },
-                text = { Text(stringResource(R.string.delete_warning)) },
+                text = {
+                    Text(
+                        if (dialog.toBin) {
+                            pluralStringResource(R.plurals.delete_to_bin_body, RecycleBin.RETENTION_DAYS, RecycleBin.RETENTION_DAYS)
+                        } else {
+                            stringResource(R.string.delete_warning)
+                        },
+                    )
+                },
                 confirmButton = {
                     TextButton(onClick = { viewModel.delete(entries) }) {
                         Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)

@@ -36,6 +36,7 @@ import io.github.linuskromnow.linusexplorer.ui.editor.EditorScreen
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
 import io.github.linuskromnow.linusexplorer.ui.lock.LockScreen
 import io.github.linuskromnow.linusexplorer.ui.settings.SettingsScreen
+import io.github.linuskromnow.linusexplorer.ui.trash.RecycleBinScreen
 import io.github.linuskromnow.linusexplorer.ui.theme.LinusExplorerTheme
 
 // FragmentActivity (a ComponentActivity) because BiometricPrompt needs one.
@@ -68,6 +69,7 @@ class MainActivity : FragmentActivity() {
 private fun AppRoot(lockViewModel: AppLockViewModel = viewModel()) {
     val lock by lockViewModel.state.collectAsStateWithLifecycle()
     var showSettings by rememberSaveable { mutableStateOf(false) }
+    var showRecycleBin by rememberSaveable { mutableStateOf(false) }
     LifecycleStartEffect(Unit) {
         lockViewModel.onAppForeground()
         onStopOrDispose { lockViewModel.onAppBackground() }
@@ -96,6 +98,11 @@ private fun AppRoot(lockViewModel: AppLockViewModel = viewModel()) {
             SecureWindow(lock.enabled)
             SettingsScreen(onBack = { showSettings = false }, lockViewModel = lockViewModel)
         }
+        showRecycleBin -> {
+            BackHandler { showRecycleBin = false }
+            SecureWindow(lock.enabled)
+            RecycleBinScreen(onBack = { showRecycleBin = false })
+        }
         else -> {
             // The editor is drawn over the browser instead of replacing it, so browser state and
             // the vault's background auto-lock keep working while a file is open.
@@ -103,6 +110,7 @@ private fun AppRoot(lockViewModel: AppLockViewModel = viewModel()) {
             BrowserScreen(
                 onEditFile = { editing = it },
                 onOpenSettings = { showSettings = true },
+                onOpenRecycleBin = { showRecycleBin = true },
                 lockViewModel = lockViewModel,
             )
             editing?.let { EditorScreen(location = it, onClose = { editing = null }) }

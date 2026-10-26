@@ -22,7 +22,7 @@
 - [x] File encryption (.age, interoperable with age/rage), encrypted private vault, app lock (PIN + fingerprint)
 - [x] Unlock the vault with fingerprint (Keystore-wrapped master key); vault backup & restore (.lxvault)
 - [x] Built-in text editor (line numbers, find/replace, undo/redo, encoding and line-ending aware, works in the vault)
-- [ ] Recycle bin (optional)
+- [x] Recycle bin: per-volume hidden bin (instant moves), restore, delete forever, auto-purge after 30 days
 - [ ] Root access (optional, via libsu)
 
 ## v0.3: network protocols

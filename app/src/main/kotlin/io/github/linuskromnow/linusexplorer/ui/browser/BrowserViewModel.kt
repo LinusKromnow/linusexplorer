@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import io.github.linuskromnow.linusexplorer.fs.ConflictResolution
@@ -62,6 +63,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val fileTransfer = container.fileTransfer
     private val preferences = container.preferences
     private val savedFolders = container.savedFolders
+    private val recycleBin = container.recycleBin
     val imageLoader = container.imageLoader
 
     private val _state = MutableStateFlow(
@@ -100,6 +102,9 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         onVaultBiometricChanged()
         viewModelScope.launch {
             network.store.connections.collect { list -> _state.update { it.copy(connections = list) } }
+        }
+        viewModelScope.launch {
+            recycleBin.restores.drop(1).collect { refresh() }
         }
         viewModelScope.launch {
             savedFolders.data.collect { data -> _state.update { it.copy(bookmarks = data.bookmarks, recents = data.recents) } }
@@ -931,8 +936,15 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun requestDelete() {
-        val entries = _state.value.selectedEntries
-        if (entries.isNotEmpty() && !_state.value.readOnly) showDialog(BrowserDialog.ConfirmDelete(entries))
+        val state = _state.value
+        val entries = state.selectedEntries
+        if (entries.isEmpty() || state.readOnly) return
+        showDialog(BrowserDialog.ConfirmDelete(entries, toBin = entries.all { usesRecycleBin(it.path) }))
+    }
+
+    private fun usesRecycleBin(path: String): Boolean {
+        val state = _state.value
+        return state.prefs.recycleBin && state.location.fsId == LocalFileSystem.ID && recycleBin.accepts(path)
     }
 
     fun createFolder(name: String) = runFsAction { fs, dir -> fs.createDirectory(VfsPaths.child(dir, name)) }
@@ -946,13 +958,17 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     fun delete(entries: List<FileEntry>) {
         val location = _state.value.location
         _state.update { it.copy(dialog = null, selection = emptySet()) }
+        val toBin = entries.filter { usesRecycleBin(it.path) }.mapTo(HashSet()) { it.path } // decided while still on this folder
         runTransfer(TransferKind.DELETE, retry = {}) {
             val fs = fileSystems[location.fsId]
+            var trashed = 0
             entries.forEachIndexed { index, entry ->
                 onProgress(TransferProgress(index, entries.size, index.toLong(), entries.size.toLong(), entry.name))
-                fs.delete(entry.path)
+                // A bin on another mount than the file (rare bind mounts) can't take it; delete as asked.
+                if (entry.path in toBin && recycleBin.trash(entry.path)) trashed++ else fs.delete(entry.path)
             }
-            _events.trySend(BrowserEvent.Message(R.plurals.msg_deleted, listOf(entries.size), entries.size))
+            val message = if (trashed == entries.size) R.plurals.msg_moved_to_bin else R.plurals.msg_deleted
+            _events.trySend(BrowserEvent.Message(message, listOf(entries.size), entries.size))
         }
     }
 

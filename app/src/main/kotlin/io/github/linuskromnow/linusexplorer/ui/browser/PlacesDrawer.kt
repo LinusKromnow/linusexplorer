@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.ClearAll
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.History
 import androidx.compose.ui.Alignment
 import io.github.linuskromnow.linusexplorer.data.Bookmark
@@ -59,6 +60,8 @@ fun PlacesDrawer(
     onFolderClick: (Location) -> Unit,
     onRemoveBookmark: (Bookmark) -> Unit,
     onClearRecents: () -> Unit,
+    /** Null hides the entry (recycle bin switched off). */
+    onRecycleBinClick: (() -> Unit)?,
 ) {
     ModalDrawerSheet {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -142,6 +145,15 @@ fun PlacesDrawer(
             }
 
             HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
+            if (onRecycleBinClick != null) {
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.recycle_bin_title)) },
+                    icon = { Icon(Icons.Default.Delete, contentDescription = null) },
+                    selected = false,
+                    onClick = onRecycleBinClick,
+                    modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                )
+            }
             NavigationDrawerItem(
                 label = { Text(stringResource(R.string.settings_title)) },
                 icon = { Icon(Icons.Default.Settings, contentDescription = null) },

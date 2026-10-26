@@ -103,6 +103,7 @@ import kotlinx.coroutines.launch
 fun BrowserScreen(
     onEditFile: (Location) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenRecycleBin: () -> Unit,
     viewModel: BrowserViewModel = viewModel(),
     lockViewModel: AppLockViewModel = viewModel(),
 ) {
@@ -205,6 +206,14 @@ fun BrowserScreen(
                 },
                 onRemoveBookmark = viewModel::removeBookmark,
                 onClearRecents = viewModel::clearRecents,
+                onRecycleBinClick = if (state.prefs.recycleBin) {
+                    {
+                        onOpenRecycleBin()
+                        scope.launch { drawerState.close() }
+                    }
+                } else {
+                    null
+                },
             )
         },
     ) {

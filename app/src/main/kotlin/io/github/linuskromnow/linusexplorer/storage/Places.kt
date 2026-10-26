@@ -39,7 +39,7 @@ object Places {
         return volumes + root + shortcuts
     }
 
-    private fun volumes(context: Context): List<Place> {
+    fun volumes(context: Context): List<Place> {
         val storageManager = context.getSystemService(StorageManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             return storageManager.storageVolumes
