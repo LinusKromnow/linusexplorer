@@ -213,7 +213,7 @@ fun BrowserScreen(
                 } else {
                     null
                 },
-                onRootClick = if (state.prefs.rootAccess) {
+                onRootClick = if (state.prefs.rootAccess && RootFileSystem.isAvailable) {
                     {
                         viewModel.navigateTo(Location(RootFileSystem.ID, VfsPaths.ROOT))
                         scope.launch { drawerState.close() }

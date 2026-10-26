@@ -30,13 +30,15 @@ object Places {
 
     fun all(context: Context): List<Place> {
         val volumes = volumes(context)
+        // Apps usually may not list "/" itself; an entry that only says "Permission denied" is noise.
         val root = Place(context.getString(R.string.place_root), VfsPaths.ROOT, Place.Kind.ROOT)
+            .takeIf { File(VfsPaths.ROOT).listFiles() != null }
         val primary = primaryStoragePath()
         val shortcuts = shortcutFolders
             .map { File(primary, it) }
             .filter { it.isDirectory }
             .map { Place(it.name, it.path, Place.Kind.FOLDER) }
-        return volumes + root + shortcuts
+        return volumes + listOfNotNull(root) + shortcuts
     }
 
     fun volumes(context: Context): List<Place> {

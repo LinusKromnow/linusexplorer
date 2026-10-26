@@ -21,6 +21,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -156,5 +157,16 @@ class RootFileSystem(context: Context) : VirtualFileSystem {
 
     companion object {
         const val ID = "root"
+
+        private val SU_DIRS = listOf("/system/bin", "/system/xbin", "/sbin", "/debug_ramdisk", "/su/bin", "/vendor/bin")
+
+        /**
+         * Whether this device has a `su` the app may run, checked without asking for root (that
+         * would pop up the root manager). An adb-only `su`, as on emulator images, doesn't count.
+         */
+        val isAvailable: Boolean by lazy {
+            val path = System.getenv("PATH").orEmpty().split(':').filter { it.isNotEmpty() }
+            (path + SU_DIRS).distinct().any { dir -> File(dir, "su").let { it.isFile && it.canExecute() } }
+        }
     }
 }

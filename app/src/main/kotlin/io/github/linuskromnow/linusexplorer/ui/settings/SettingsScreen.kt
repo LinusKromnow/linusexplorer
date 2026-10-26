@@ -46,6 +46,7 @@ import io.github.linuskromnow.linusexplorer.data.AppearancePrefs
 import io.github.linuskromnow.linusexplorer.data.ThemeMode
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.ViewMode
+import io.github.linuskromnow.linusexplorer.fs.root.RootFileSystem
 import io.github.linuskromnow.linusexplorer.security.Biometrics
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockSettingsDialog
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockViewModel
@@ -126,8 +127,10 @@ fun SettingsScreen(
             SwitchRow(stringResource(R.string.settings_recycle_bin), stringResource(R.string.settings_recycle_bin_summary), browser.recycleBin) {
                 viewModel.updateBrowser { it.copy(recycleBin = !it.recycleBin) }
             }
-            SwitchRow(stringResource(R.string.settings_root_access), stringResource(R.string.settings_root_access_summary), browser.rootAccess) {
-                viewModel.updateBrowser { it.copy(rootAccess = !it.rootAccess) }
+            if (RootFileSystem.isAvailable) {
+                SwitchRow(stringResource(R.string.settings_root_access), stringResource(R.string.settings_root_access_summary), browser.rootAccess) {
+                    viewModel.updateBrowser { it.copy(rootAccess = !it.rootAccess) }
+                }
             }
 
             Section(stringResource(R.string.settings_security))

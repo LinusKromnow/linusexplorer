@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name" translatable="false">LinusExplorer</string>
+    <!-- Short name under the launcher icon; the app is still called LinusExplorer everywhere else. -->
+    <string name="launcher_name" translatable="false">LEFiles</string>
 
     <!-- Places -->
     <string name="place_root">Root</string>
@@ -236,7 +238,7 @@
     <string name="settings_recycle_bin">Recycle bin</string>
     <string name="settings_recycle_bin_summary">Deleted files on this device can be restored for 30 days</string>
     <string name="settings_root_access">Root access</string>
-    <string name="settings_root_access_summary">On rooted devices, adds “Root (superuser)” to the menu to browse and change system folders. Careful: mistakes there can break the system.</string>
+    <string name="settings_root_access_summary">Adds “Root (superuser)” to the menu to browse and change system folders. Careful: mistakes there can break the system.</string>
     <string name="settings_security">Security</string>
     <string name="settings_on">On</string>
     <string name="settings_off">Off</string>
