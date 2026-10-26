@@ -18,6 +18,7 @@ import io.github.linuskromnow.linusexplorer.fs.FileTransfer
 import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.security.VaultBiometrics
+import io.github.linuskromnow.linusexplorer.tasks.RemoteEdits
 import io.github.linuskromnow.linusexplorer.tasks.TaskManager
 import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailFetcher
 import io.github.linuskromnow.linusexplorer.thumbnails.ThumbnailKeyer
@@ -43,7 +44,8 @@ class LinusExplorerApp : Application() {
         container = AppContainer(this)
         TransferService.createChannel(this)
         // Files decrypted or unpacked for other apps only need to live until the next start.
-        Thread { File(cacheDir, BrowserViewModel.OPEN_CACHE).deleteRecursively() }.start()
+        // Copies of remote files with edits not uploaded yet are kept for the upload prompt.
+        Thread { container.remoteEdits.cleanCache(File(cacheDir, BrowserViewModel.OPEN_CACHE), keepUnchanged = false) }.start()
         // Without storage access yet the bins just look empty, so this is safe on the very first start.
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch { runCatching { container.recycleBin.purgeOlderThan() } }
     }
@@ -67,6 +69,7 @@ class AppContainer(context: Context) {
     val savedFolders = SavedFolders(File(context.filesDir, "saved_folders.bin"))
     val recycleBin = RecycleBin(volumeRoots = { Places.volumes(context).map { it.path } })
     val tasks = TaskManager(context.applicationContext)
+    val remoteEdits = RemoteEdits(File(context.filesDir, "remote_edits.bin"))
 
     /**
      * Thumbnail loader. No disk cache on purpose: the fetchers read local sources directly, and

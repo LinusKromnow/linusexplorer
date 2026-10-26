@@ -35,7 +35,8 @@ Each is a `VirtualFileSystem` plus a saved-connection entry (credentials in Andr
 | ✅ SMB 2/3       | smbj                           | Apache-2.0 |
 | ✅ WebDAV         | OkHttp (hand-written client)   | Apache-2.0 |
 
-Also: open remote files by streaming them to cache, and an "edit and upload back" flow.
+- [x] Open remote files via a cached copy
+- [x] "Edit and upload back": changes another app saves to that copy are offered for upload (with a warning if the server copy changed too)
 
 ## v0.4+: cloud storage
 All through public REST APIs with OkHttp + AppAuth (browser-based OAuth). No vendor SDKs, so F-Droid accepts it.

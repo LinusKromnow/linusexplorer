@@ -173,6 +173,27 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
             onTrust = { viewModel.trustHost(dialog) },
             onDismiss = viewModel::dismissDialog,
         )
+        is BrowserDialog.UploadChanges -> AlertDialog(
+            onDismissRequest = viewModel::dismissDialog,
+            title = { Text(stringResource(R.string.upload_changes_title, dialog.edit.name)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(stringResource(R.string.upload_changes_body))
+                    if (dialog.remoteChanged) Text(stringResource(R.string.upload_changes_conflict), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.uploadChanges(dialog.edit) }) { Text(stringResource(R.string.action_upload)) }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { viewModel.discardChanges(dialog.edit) }) {
+                        Text(stringResource(R.string.action_discard), color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = viewModel::dismissDialog) { Text(stringResource(R.string.action_later)) }
+                }
+            },
+        )
         is BrowserDialog.RestoreVault -> AlertDialog(
             onDismissRequest = viewModel::dismissDialog,
             title = { Text(stringResource(R.string.vault_restore_title)) },

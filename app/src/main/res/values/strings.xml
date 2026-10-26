@@ -127,6 +127,14 @@
         <item quantity="other">It goes to the recycle bin, where you can restore it for %d days.</item>
     </plurals>
 
+    <!-- Uploading edits of remote files -->
+    <string name="upload_changes_title">Upload changes to “%1$s”?</string>
+    <string name="upload_changes_body">Another app saved changes to this file. Upload them to the server?</string>
+    <string name="upload_changes_conflict">The file was also changed on the server since you opened it. Uploading replaces that version.</string>
+    <string name="action_upload">Upload</string>
+    <string name="action_later">Later</string>
+    <string name="msg_uploaded">Uploaded “%1$s”</string>
+
     <!-- Recycle bin -->
     <string name="recycle_bin_title">Recycle bin</string>
     <string name="action_empty_bin">Empty recycle bin</string>
@@ -150,6 +158,7 @@
     <string name="transfer_opening">Opening</string>
     <string name="transfer_preparing">Preparing…</string>
     <string name="transfer_deleting">Deleting</string>
+    <string name="transfer_uploading">Uploading</string>
     <string name="action_hide">Hide</string>
     <string name="msg_task_busy">Another operation is still running</string>
     <string name="notification_channel_transfers">File operations</string>

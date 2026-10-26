@@ -8,6 +8,7 @@ import io.github.linuskromnow.linusexplorer.fs.Location
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import io.github.linuskromnow.linusexplorer.fs.network.UntrustedHostKeyException
 import io.github.linuskromnow.linusexplorer.fs.search.SearchHit
+import io.github.linuskromnow.linusexplorer.tasks.RemoteEdit
 import io.github.linuskromnow.linusexplorer.tasks.TransferState
 import io.github.linuskromnow.linusexplorer.fs.vault.VaultFileSystem
 import io.github.linuskromnow.linusexplorer.storage.Place
@@ -87,6 +88,9 @@ sealed interface BrowserDialog {
     /** Add ([connection] = null) or edit a network connection. */
     data class EditConnection(val connection: Connection?) : BrowserDialog
     class TrustHost(val error: UntrustedHostKeyException) : BrowserDialog
+
+    /** Another app saved changes to the local copy of a remote file. [remoteChanged]: the server copy changed too. */
+    data class UploadChanges(val edit: RemoteEdit, val remoteChanged: Boolean) : BrowserDialog
 }
 
 sealed interface BrowserEvent {

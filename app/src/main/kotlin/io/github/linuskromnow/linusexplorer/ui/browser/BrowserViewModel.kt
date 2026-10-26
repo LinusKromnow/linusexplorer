@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import io.github.linuskromnow.linusexplorer.fs.ConflictResolution
+import io.github.linuskromnow.linusexplorer.tasks.RemoteEdit
 import io.github.linuskromnow.linusexplorer.tasks.TaskScope
 import io.github.linuskromnow.linusexplorer.tasks.TransferKind
 import kotlinx.coroutines.launch
@@ -64,6 +65,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
     private val preferences = container.preferences
     private val savedFolders = container.savedFolders
     private val recycleBin = container.recycleBin
+    private val remoteEdits = container.remoteEdits
     val imageLoader = container.imageLoader
 
     private val _state = MutableStateFlow(
@@ -120,6 +122,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
             }
         }
         load()
+        checkRemoteEdits()
     }
 
     // region Navigation
@@ -680,7 +683,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         if (!vault.isUnlocked) return
         vault.lock()
         imageLoader.memoryCache?.clear() // may hold decrypted vault thumbnails
-        viewModelScope.launch(Dispatchers.IO) { File(getApplication<Application>().cacheDir, OPEN_CACHE).deleteRecursively() }
+        // Remote files being edited elsewhere aren't vault content; only the decrypted copies go.
+        viewModelScope.launch(Dispatchers.IO) { remoteEdits.cleanCache(File(getApplication<Application>().cacheDir, OPEN_CACHE), keepUnchanged = true) }
         if (_state.value.inVault) {
             history.removeAll { it.fsId == VaultFileSystem.ID }
             show(Location(LocalFileSystem.ID, Places.primaryStoragePath()))
@@ -717,6 +721,7 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val since = backgroundSince ?: return
         backgroundSince = null
         if (System.currentTimeMillis() - since >= VAULT_AUTO_LOCK_MS) lockVault()
+        checkRemoteEdits() // the user may be back from editing a remote file in another app
     }
 
     // endregion
@@ -772,14 +777,87 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         _events.trySend(BrowserEvent.Share(files.map { it.path }))
     }
 
-    /** Copies a non-local file into the cache, then hands it to another app. */
+    /**
+     * Copies a non-local file into the cache, then hands it to another app. Copies of network files
+     * are tracked so changes saved by that app can be uploaded back (see [checkRemoteEdits]).
+     */
     private fun openViaCache(entry: FileEntry) {
         val location = _state.value.location
         runTransfer(TransferKind.OPEN, retry = { openViaCache(entry) }) {
             val local = copyToCache(location, entry, onProgress)
+            if (Connection.connectionIdOf(location.fsId) != null) {
+                withContext(Dispatchers.IO) { remoteEdits.track(Location(location.fsId, entry.path), local, entry.lastModified) }
+            }
             _events.trySend(BrowserEvent.OpenFile(local.path))
         }
     }
+
+    // region Uploading edits of remote files
+
+    /** Offers the next locally edited remote file for upload, unless something else is on screen. */
+    private fun checkRemoteEdits() {
+        viewModelScope.launch {
+            val edit = withContext(Dispatchers.IO) { remoteEdits.changed().firstOrNull() } ?: return@launch
+            val remote = try {
+                fileSystems[edit.source.fsId].stat(edit.source.path).lastModified
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                0L // offline or deleted: the upload itself will tell
+            }
+            val remoteChanged = remote != 0L && edit.remoteModified != 0L && remote != edit.remoteModified
+            if (_state.value.dialog == null && _state.value.transfer == null) {
+                showDialog(BrowserDialog.UploadChanges(edit, remoteChanged))
+            }
+        }
+    }
+
+    fun uploadChanges(edit: RemoteEdit) {
+        _state.update { it.copy(dialog = null) }
+        runTransfer(TransferKind.UPLOAD, retry = { uploadChanges(edit) }) {
+            val fs = fileSystems[edit.source.fsId]
+            val local = File(edit.localPath)
+            val total = local.length()
+            withContext(Dispatchers.IO) {
+                local.inputStream().use { input ->
+                    fs.openOutput(edit.source.path).use { output ->
+                        val buffer = ByteArray(64 * 1024)
+                        var done = 0L
+                        while (true) {
+                            val read = input.read(buffer)
+                            if (read < 0) break
+                            output.write(buffer, 0, read)
+                            done += read
+                            onProgress(TransferProgress(0, 1, done, total, edit.name))
+                        }
+                    }
+                }
+            }
+            val remoteModified = try {
+                fs.stat(edit.source.path).lastModified
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                0L
+            }
+            withContext(Dispatchers.IO) { remoteEdits.markUploaded(edit, remoteModified) }
+            _events.trySend(BrowserEvent.Message(R.string.msg_uploaded, listOf(edit.name)))
+        }
+    }
+
+    /** Throws the local changes away. */
+    fun discardChanges(edit: RemoteEdit) {
+        _state.update { it.copy(dialog = null) }
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                remoteEdits.forget(edit)
+                File(edit.localPath).parentFile?.deleteRecursively()
+            }
+            checkRemoteEdits()
+        }
+    }
+
+    // endregion
 
     private suspend fun copyToCache(location: Location, entry: FileEntry, onProgress: (TransferProgress) -> Unit): File {
         (fileSystems.find(location.fsId) as? ArchiveFileSystem)?.verifyPassword()

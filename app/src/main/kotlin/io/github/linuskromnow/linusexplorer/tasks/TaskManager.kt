@@ -28,6 +28,7 @@ enum class TransferKind(val titleRes: Int) {
     BACKUP(R.string.transfer_backing_up),
     RESTORE(R.string.transfer_restoring),
     DELETE(R.string.transfer_deleting),
+    UPLOAD(R.string.transfer_uploading),
 }
 
 /** A name clash the running task is waiting on; answer it with [TaskManager.answerConflict]. */
