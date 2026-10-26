@@ -57,7 +57,7 @@ Alternative worth evaluating: embedding **rclone** (MIT, 70+ providers) as a clo
 ## Publishing checklist
 - [ ] Release signing config (keystore kept out of git; secrets via `keystore.properties` / CI secrets)
 - [x] Real launcher icon (adaptive + themed) and store icon
-- [ ] Screenshots in `fastlane/metadata/android/en-US/images/`
+- [x] Screenshots in `fastlane/metadata/android/en-US/images/` (7 phone, 2 tablet)
 - [ ] **F-Droid:** tag releases (`v0.1.0`), bump `versionCode` each release, open a merge request to
       [fdroiddata](https://gitlab.com/fdroid/fdroiddata). F-Droid builds from source and signs with its own key
       unless the build is reproducible.

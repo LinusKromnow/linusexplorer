@@ -13,8 +13,8 @@ android {
         applicationId = "io.github.linuskromnow.linusexplorer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 300 // major * 10000 + minor * 100 + patch
+        versionName = "0.3.0"
     }
 
     buildTypes {
