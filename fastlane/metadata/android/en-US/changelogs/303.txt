@@ -1,0 +1,5 @@
+• APK files can be installed straight from the app
+• Files of unknown type can be opened as text, image, audio or video
+• Choose the folder the app starts in ("Set as start folder" in a folder's menu)
+• The folder on screen refreshes when you come back to the app
+• Every section of the side menu can be collapsed; recent folders start collapsed
