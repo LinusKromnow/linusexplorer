@@ -46,6 +46,9 @@ import io.github.linuskromnow.linusexplorer.data.AppearancePrefs
 import io.github.linuskromnow.linusexplorer.data.ThemeMode
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
 import io.github.linuskromnow.linusexplorer.fs.ViewMode
+import io.github.linuskromnow.linusexplorer.fs.VfsPaths
+import io.github.linuskromnow.linusexplorer.fs.local.LocalFileSystem
+import io.github.linuskromnow.linusexplorer.storage.Places
 import io.github.linuskromnow.linusexplorer.fs.root.RootFileSystem
 import io.github.linuskromnow.linusexplorer.security.Biometrics
 import io.github.linuskromnow.linusexplorer.ui.lock.AppLockSettingsDialog
@@ -70,6 +73,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         container.viewModeForAll.tryEmit(mode)
     }
 
+    val connections = container.network.store.connections
+
+    fun resetStartFolder() = updateBrowser { it.copy(startLocation = null) }
+
     fun updateAppearance(transform: (AppearancePrefs) -> AppearancePrefs) {
         viewModelScope.launch { preferences.updateAppearance(transform) }
     }
@@ -90,6 +97,17 @@ fun SettingsScreen(
     val context = LocalContext.current
     var themeDialog by rememberSaveable { mutableStateOf(false) }
     var appLockDialog by rememberSaveable { mutableStateOf(false) }
+    var startFolderDialog by rememberSaveable { mutableStateOf(false) }
+    val connections by viewModel.connections.collectAsStateWithLifecycle()
+    val volumes = remember { Places.volumes(context) }
+    val startFolder = browser.startLocation.let { start ->
+        when {
+            start == null -> volumes.firstOrNull()?.label ?: VfsPaths.ROOT
+            start.fsId == LocalFileSystem.ID -> Places.describe(start.path, volumes)
+            else -> listOfNotNull(connections.find { it.fsId == start.fsId }?.label, start.path.takeIf { it != VfsPaths.ROOT })
+                .joinToString(" › ")
+        }
+    }
     val version = remember { context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty() }
 
     Scaffold(
@@ -125,6 +143,7 @@ fun SettingsScreen(
             }
 
             Section(stringResource(R.string.settings_files))
+            Row(stringResource(R.string.settings_start_folder), startFolder) { startFolderDialog = true }
             SwitchRow(stringResource(R.string.action_show_hidden), null, browser.showHidden) {
                 viewModel.updateBrowser { it.copy(showHidden = !it.showHidden) }
             }
@@ -175,6 +194,26 @@ fun SettingsScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { themeDialog = false }) { Text(stringResource(R.string.action_close)) } },
+        )
+    }
+    if (startFolderDialog) {
+        AlertDialog(
+            onDismissRequest = { startFolderDialog = false },
+            title = { Text(stringResource(R.string.settings_start_folder)) },
+            text = { Text(startFolder + "\n\n" + stringResource(R.string.settings_start_folder_body)) },
+            confirmButton = {
+                TextButton(onClick = { startFolderDialog = false }) { Text(stringResource(R.string.action_close)) }
+            },
+            dismissButton = if (browser.startLocation != null) {
+                {
+                    TextButton(onClick = {
+                        viewModel.resetStartFolder()
+                        startFolderDialog = false
+                    }) { Text(stringResource(R.string.action_reset_start_folder)) }
+                }
+            } else {
+                null
+            },
         )
     }
     if (appLockDialog) {

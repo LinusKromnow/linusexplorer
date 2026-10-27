@@ -13,6 +13,9 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
 
+    <!-- Opening an .apk hands it to the system installer, which requires this; Android still asks the user. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <!-- Only used for servers and cloud accounts the user adds (SFTP, ...). -->
     <uses-permission android:name="android.permission.INTERNET" />
 

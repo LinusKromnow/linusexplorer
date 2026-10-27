@@ -8,6 +8,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
+import io.github.linuskromnow.linusexplorer.fs.DrawerSection
+import io.github.linuskromnow.linusexplorer.fs.Location
 import androidx.datastore.preferences.preferencesDataStore
 import io.github.linuskromnow.linusexplorer.editor.EditorPrefs
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
@@ -64,6 +67,15 @@ class UserPreferences(context: Context) {
             prefs[RECYCLE_BIN] = updated.recycleBin
             prefs[DUAL_PANE] = updated.dualPane
             prefs[ROOT_ACCESS] = updated.rootAccess
+            prefs[DRAWER_COLLAPSED] = updated.collapsedSections.mapTo(HashSet()) { it.name }
+            val start = updated.startLocation
+            if (start != null) {
+                prefs[START_FS] = start.fsId
+                prefs[START_PATH] = start.path
+            } else {
+                prefs.remove(START_FS)
+                prefs.remove(START_PATH)
+            }
         }
     }
 
@@ -97,6 +109,10 @@ class UserPreferences(context: Context) {
             recycleBin = this[RECYCLE_BIN] ?: defaults.recycleBin,
             dualPane = this[DUAL_PANE] ?: defaults.dualPane,
             rootAccess = this[ROOT_ACCESS] ?: defaults.rootAccess,
+            collapsedSections = this[DRAWER_COLLAPSED]
+                ?.mapNotNullTo(HashSet()) { name -> DrawerSection.entries.find { it.name == name } }
+                ?: defaults.collapsedSections,
+            startLocation = this[START_FS]?.let { fsId -> this[START_PATH]?.let { Location(fsId, it) } },
         )
     }
 
@@ -131,6 +147,9 @@ class UserPreferences(context: Context) {
         val RECYCLE_BIN = booleanPreferencesKey("recycle_bin")
         val DUAL_PANE = booleanPreferencesKey("dual_pane")
         val ROOT_ACCESS = booleanPreferencesKey("root_access")
+        val DRAWER_COLLAPSED = stringSetPreferencesKey("drawer_collapsed")
+        val START_FS = stringPreferencesKey("start_fs")
+        val START_PATH = stringPreferencesKey("start_path")
         val THEME = stringPreferencesKey("theme")
         val DYNAMIC_COLOR = booleanPreferencesKey("dynamic_color")
         val EDITOR_WRAP = booleanPreferencesKey("editor_word_wrap")

@@ -346,3 +346,30 @@ fun PermissionContent(onGrantClick: () -> Unit) {
         Button(onClick = onGrantClick) { Text(stringResource(R.string.permission_grant)) }
     }
 }
+
+/** For files no installed app claims: open as text (built-in editor, [onPick] with null) or a MIME type. */
+@Composable
+fun OpenAsDialog(fileName: String, onPick: (type: String?) -> Unit, onDismiss: () -> Unit) {
+    val choices = listOf(
+        R.string.open_as_text to null,
+        R.string.open_as_image to "image/*",
+        R.string.open_as_audio to "audio/*",
+        R.string.open_as_video to "video/*",
+        R.string.open_as_any to "*/*",
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.open_as_title, fileName), maxLines = 2, overflow = TextOverflow.Ellipsis) },
+        text = {
+            Column {
+                choices.forEach { (label, type) ->
+                    TextButton(onClick = { onPick(type) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(label), modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
+}

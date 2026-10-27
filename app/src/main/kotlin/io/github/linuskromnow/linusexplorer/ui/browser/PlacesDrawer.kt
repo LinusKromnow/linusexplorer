@@ -1,46 +1,56 @@
 package io.github.linuskromnow.linusexplorer.ui.browser
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.filled.Bookmark
-import androidx.compose.material.icons.filled.ClearAll
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.History
-import androidx.compose.ui.Alignment
-import io.github.linuskromnow.linusexplorer.data.Bookmark
-import io.github.linuskromnow.linusexplorer.fs.Location
-import io.github.linuskromnow.linusexplorer.fs.root.RootFileSystem
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
-import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.ClearAll
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material3.IconButton
-import androidx.compose.ui.text.style.TextOverflow
-import io.github.linuskromnow.linusexplorer.fs.network.Connection
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PhoneAndroid
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SdCard
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.linuskromnow.linusexplorer.R
+import io.github.linuskromnow.linusexplorer.data.Bookmark
+import io.github.linuskromnow.linusexplorer.fs.DrawerSection
+import io.github.linuskromnow.linusexplorer.fs.Location
+import io.github.linuskromnow.linusexplorer.fs.network.Connection
+import io.github.linuskromnow.linusexplorer.fs.root.RootFileSystem
 import io.github.linuskromnow.linusexplorer.storage.Place
 
 @Composable
@@ -66,7 +76,18 @@ fun PlacesDrawer(
     onRecycleBinClick: (() -> Unit)?,
     /** Null hides the entry (root access switched off). */
     onRootClick: (() -> Unit)?,
+    collapsed: Set<DrawerSection>,
+    onToggleSection: (DrawerSection) -> Unit,
 ) {
+    @Composable
+    fun Section(
+        section: DrawerSection,
+        title: String,
+        divider: Boolean = true,
+        action: (@Composable () -> Unit)? = null,
+        content: @Composable () -> Unit,
+    ) = CollapsibleSection(title, expanded = section !in collapsed, { onToggleSection(section) }, divider, action, content)
+
     ModalDrawerSheet {
         Column(Modifier.verticalScroll(rememberScrollState())) {
             Text(
@@ -74,87 +95,91 @@ fun PlacesDrawer(
                 style = MaterialTheme.typography.titleLarge,
                 modifier = Modifier.padding(horizontal = 28.dp, vertical = 20.dp),
             )
-            SectionHeader(stringResource(R.string.drawer_storage))
-            places.filter { it.kind != Place.Kind.FOLDER }.forEach { PlaceItem(it, currentPath, onPlaceClick) }
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.vault_name)) },
-                icon = { Icon(Icons.Default.Lock, contentDescription = null) },
-                selected = vaultSelected,
-                onClick = onVaultClick,
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
-            if (onRootClick != null) {
+            Section(DrawerSection.STORAGE, stringResource(R.string.drawer_storage), divider = false) {
+                places.filter { it.kind != Place.Kind.FOLDER }.forEach { PlaceItem(it, currentPath, onPlaceClick) }
                 NavigationDrawerItem(
-                    label = { Text(stringResource(R.string.place_superuser)) },
-                    icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = null) },
-                    selected = currentFsId == RootFileSystem.ID,
-                    onClick = onRootClick,
+                    label = { Text(stringResource(R.string.vault_name)) },
+                    icon = { Icon(Icons.Default.Lock, contentDescription = null) },
+                    selected = vaultSelected,
+                    onClick = onVaultClick,
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                 )
-            }
-
-            if (bookmarks.isNotEmpty()) {
-                HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
-                SectionHeader(stringResource(R.string.drawer_bookmarks))
-                bookmarks.forEach { bookmark ->
-                    FolderItem(
-                        label = describe(bookmark.location).copy(title = bookmark.name),
-                        icon = Icons.Default.Bookmark,
-                        selected = bookmark.location == currentLocation,
-                        onClick = { onFolderClick(bookmark.location) },
-                        badge = {
-                            IconButton(onClick = { onRemoveBookmark(bookmark) }) {
-                                Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_remove_bookmark))
-                            }
-                        },
+                if (onRootClick != null) {
+                    NavigationDrawerItem(
+                        label = { Text(stringResource(R.string.place_superuser)) },
+                        icon = { Icon(Icons.Default.AdminPanelSettings, contentDescription = null) },
+                        selected = currentFsId == RootFileSystem.ID,
+                        onClick = onRootClick,
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                     )
                 }
             }
 
-            // The folder on screen is always the newest entry; listing it would only repeat the title bar.
-            val otherRecents = recents.filter { it != currentLocation }.take(MAX_RECENTS_SHOWN)
-            if (otherRecents.isNotEmpty()) {
-                HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SectionHeader(stringResource(R.string.drawer_recent), Modifier.weight(1f))
-                    IconButton(onClick = onClearRecents, modifier = Modifier.padding(end = 16.dp)) {
-                        Icon(Icons.Default.ClearAll, contentDescription = stringResource(R.string.action_clear_recent))
+            if (bookmarks.isNotEmpty()) {
+                Section(DrawerSection.BOOKMARKS, stringResource(R.string.drawer_bookmarks)) {
+                    bookmarks.forEach { bookmark ->
+                        FolderItem(
+                            label = describe(bookmark.location).copy(title = bookmark.name),
+                            icon = Icons.Default.Bookmark,
+                            selected = bookmark.location == currentLocation,
+                            onClick = { onFolderClick(bookmark.location) },
+                            badge = {
+                                IconButton(onClick = { onRemoveBookmark(bookmark) }) {
+                                    Icon(Icons.Default.Close, contentDescription = stringResource(R.string.action_remove_bookmark))
+                                }
+                            },
+                        )
                     }
-                }
-                otherRecents.forEach { location ->
-                    FolderItem(describe(location), Icons.Default.History, selected = false, onClick = { onFolderClick(location) })
                 }
             }
 
-            HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
-            SectionHeader(stringResource(R.string.drawer_network))
-            connections.forEach { connection ->
-                NavigationDrawerItem(
-                    label = { Text(connection.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    icon = { Icon(Icons.Default.Dns, contentDescription = null) },
-                    badge = {
-                        IconButton(onClick = { onEditConnection(connection) }) {
-                            Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.connection_edit))
+            // The folder on screen is always the newest entry; listing it would only repeat the title bar.
+            val otherRecents = recents.filter { it != currentLocation }
+            if (otherRecents.isNotEmpty()) {
+                Section(
+                    DrawerSection.RECENT,
+                    stringResource(R.string.drawer_recent),
+                    action = {
+                        IconButton(onClick = onClearRecents) {
+                            Icon(Icons.Default.ClearAll, contentDescription = stringResource(R.string.action_clear_recent))
                         }
                     },
-                    selected = currentFsId == connection.fsId,
-                    onClick = { onConnectionClick(connection) },
+                ) {
+                    otherRecents.forEach { location ->
+                        FolderItem(describe(location), Icons.Default.History, selected = false, onClick = { onFolderClick(location) })
+                    }
+                }
+            }
+
+            Section(DrawerSection.NETWORK, stringResource(R.string.drawer_network)) {
+                connections.forEach { connection ->
+                    NavigationDrawerItem(
+                        label = { Text(connection.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                        icon = { Icon(Icons.Default.Dns, contentDescription = null) },
+                        badge = {
+                            IconButton(onClick = { onEditConnection(connection) }) {
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.connection_edit))
+                            }
+                        },
+                        selected = currentFsId == connection.fsId,
+                        onClick = { onConnectionClick(connection) },
+                        modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
+                    )
+                }
+                NavigationDrawerItem(
+                    label = { Text(stringResource(R.string.connection_add)) },
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    selected = false,
+                    onClick = { onEditConnection(null) },
                     modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
                 )
             }
-            NavigationDrawerItem(
-                label = { Text(stringResource(R.string.connection_add)) },
-                icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                selected = false,
-                onClick = { onEditConnection(null) },
-                modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding),
-            )
 
             val folders = places.filter { it.kind == Place.Kind.FOLDER }
             if (folders.isNotEmpty()) {
-                HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
-                SectionHeader(stringResource(R.string.drawer_folders))
-                folders.forEach { PlaceItem(it, currentPath, onPlaceClick) }
+                Section(DrawerSection.FOLDERS, stringResource(R.string.drawer_folders)) {
+                    folders.forEach { PlaceItem(it, currentPath, onPlaceClick) }
+                }
             }
 
             HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
@@ -178,16 +203,42 @@ fun PlacesDrawer(
     }
 }
 
-private const val MAX_RECENTS_SHOWN = 5
-
+/** A drawer section whose header folds its entries away; [action] sits next to the chevron. */
 @Composable
-private fun SectionHeader(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = modifier.padding(horizontal = 28.dp, vertical = 12.dp),
-    )
+private fun CollapsibleSection(
+    title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    divider: Boolean,
+    action: (@Composable () -> Unit)?,
+    content: @Composable () -> Unit,
+) {
+    if (divider) HorizontalDivider(Modifier.padding(horizontal = 28.dp, vertical = 8.dp))
+    val state = stringResource(if (expanded) R.string.state_expanded else R.string.state_collapsed)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clickable(role = Role.Button, onClick = onToggle)
+            .semantics { stateDescription = state }
+            .padding(start = 28.dp, end = 16.dp),
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f).padding(vertical = 12.dp),
+        )
+        if (expanded) action?.invoke()
+        Icon(
+            if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(12.dp),
+        )
+    }
+    AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
+        Column { content() }
+    }
 }
 
 @Composable

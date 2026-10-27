@@ -119,6 +119,8 @@ fun BrowserScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val drawerState = rememberDrawerState(DrawerValue.Closed)
+    /** A file no installed app claimed; the user picks what to open it as. */
+    var openAs by rememberSaveable { mutableStateOf<String?>(null) }
 
     var hasAccess by remember { mutableStateOf(StorageAccess.isGranted(context)) }
     fun recheckAccess() {
@@ -131,6 +133,7 @@ fun BrowserScreen(
     LifecycleResumeEffect(Unit) {
         recheckAccess() // the user may have just returned from the All files access settings page
         viewModel.refreshPlaces()
+        viewModel.onResumed()
         onPauseOrDispose { }
     }
     val legacyPermissionLauncher = rememberLauncherForActivityResult(
@@ -148,9 +151,7 @@ fun BrowserScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is BrowserEvent.Message -> launch { snackbarHostState.showSnackbar(event.resolve(resources)) }
-                is BrowserEvent.OpenFile -> if (!FileOpener.open(context, event.path)) {
-                    launch { snackbarHostState.showSnackbar(resources.getString(R.string.msg_no_app_to_open)) }
-                }
+                is BrowserEvent.OpenFile -> if (!FileOpener.open(context, event.path)) openAs = event.path
                 is BrowserEvent.Share -> FileOpener.share(context, event.paths)
                 is BrowserEvent.EditFile -> onEditFile(event.location)
             }
@@ -213,6 +214,8 @@ fun BrowserScreen(
                 } else {
                     null
                 },
+                collapsed = state.prefs.collapsedSections,
+                onToggleSection = viewModel::toggleDrawerSection,
                 onRootClick = if (state.prefs.rootAccess && RootFileSystem.isAvailable) {
                     {
                         viewModel.navigateTo(Location(RootFileSystem.ID, VfsPaths.ROOT))
@@ -307,6 +310,20 @@ fun BrowserScreen(
     }
 
     state.dialog?.let { BrowserDialogHost(it, viewModel) }
+    openAs?.let { path ->
+        OpenAsDialog(
+            fileName = path.substringAfterLast('/'),
+            onPick = { type ->
+                openAs = null
+                when {
+                    type == null -> onEditFile(Location(LocalFileSystem.ID, path))
+                    !FileOpener.open(context, path, type) ->
+                        scope.launch { snackbarHostState.showSnackbar(resources.getString(R.string.msg_no_app_to_open)) }
+                }
+            },
+            onDismiss = { openAs = null },
+        )
+    }
     if (!isPrimary) return
     state.transfer?.let { transfer ->
         val conflict = transfer.conflict
@@ -417,6 +434,15 @@ private fun BrowserTopBar(
                         onClick = {
                             overflowOpen = false
                             viewModel.toggleBookmark()
+                        },
+                    )
+                }
+                if (bookmarked != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.action_set_start_folder)) },
+                        onClick = {
+                            overflowOpen = false
+                            viewModel.setStartFolder()
                         },
                     )
                 }

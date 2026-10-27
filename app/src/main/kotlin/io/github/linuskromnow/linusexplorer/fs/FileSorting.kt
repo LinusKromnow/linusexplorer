@@ -4,6 +4,9 @@ enum class SortField { NAME, SIZE, DATE, TYPE }
 
 enum class ViewMode { LIST, GRID }
 
+/** Sections of the navigation drawer that can be folded away. */
+enum class DrawerSection { STORAGE, BOOKMARKS, RECENT, NETWORK, FOLDERS }
+
 data class BrowserPrefs(
     val sortField: SortField = SortField.NAME,
     val descending: Boolean = false,
@@ -17,6 +20,10 @@ data class BrowserPrefs(
     val dualPane: Boolean = false,
     /** Offer browsing the device with superuser rights (rooted phones only). */
     val rootAccess: Boolean = false,
+    /** Folded drawer sections; recent folders start folded so the drawer stays short. */
+    val collapsedSections: Set<DrawerSection> = setOf(DrawerSection.RECENT),
+    /** Folder the app opens in; null means the primary storage volume. */
+    val startLocation: Location? = null,
 )
 
 object FileSorting {

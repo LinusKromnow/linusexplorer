@@ -10,6 +10,7 @@ import io.github.linuskromnow.linusexplorer.data.Bookmark
 import io.github.linuskromnow.linusexplorer.data.SavedFolders
 import io.github.linuskromnow.linusexplorer.editor.TextFiles
 import io.github.linuskromnow.linusexplorer.fs.BrowserPrefs
+import io.github.linuskromnow.linusexplorer.fs.DrawerSection
 import io.github.linuskromnow.linusexplorer.fs.FileEncryption
 import io.github.linuskromnow.linusexplorer.fs.FileEntry
 import io.github.linuskromnow.linusexplorer.fs.FileKind
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import io.github.linuskromnow.linusexplorer.fs.ConflictResolution
@@ -144,17 +146,43 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             vault.locks.drop(1).collect { leaveVault() }
         }
-        load()
+        viewModelScope.launch {
+            // The chosen start folder, unless this tab was opened on a specific folder meanwhile.
+            val start = preferences.browser.first().startLocation
+            if (!openedAt) show(start ?: _state.value.location)
+        }
     }
 
-    private var started = false
+    /** Set once a tab was opened on an explicit folder, which then wins over the start folder. */
+    private var openedAt = false
 
     /** Opens [location] in a freshly created tab; later calls (e.g. after rotation) do nothing. */
     fun startAt(location: Location?) {
-        if (started) return
-        started = true
-        if (location != null && location != _state.value.location) show(location)
+        if (location == null || openedAt) return
+        openedAt = true
+        if (location != _state.value.location) show(location)
     }
+
+    private var resumedBefore = false
+
+    /** Back in the app (or back from another screen): the folder may have changed meanwhile. */
+    fun onResumed() {
+        if (resumedBefore) refresh() else resumedBefore = true
+    }
+
+    /** Makes the folder on screen the one the app opens in. */
+    fun setStartFolder() {
+        val location = _state.value.location
+        if (!SavedFolders.canSave(location)) return
+        updatePrefs { it.copy(startLocation = location) }
+        _events.trySend(BrowserEvent.Message(R.string.msg_start_folder_set, listOf(describe(location).title)))
+    }
+
+    fun toggleDrawerSection(section: DrawerSection) =
+        updatePrefs { prefs ->
+            val collapsed = prefs.collapsedSections
+            prefs.copy(collapsedSections = if (section in collapsed) collapsed - section else collapsed + section)
+        }
 
     // region Navigation
 

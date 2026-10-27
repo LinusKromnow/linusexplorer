@@ -18,11 +18,14 @@ object FileOpener {
         return MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension) ?: ANY_TYPE
     }
 
-    /** Returns false if no installed app can open the file. */
-    fun open(context: Context, path: String): Boolean {
+    /** Returns false if no installed app can open the file as [type] (by default, guessed from its name). */
+    fun open(context: Context, path: String, type: String? = null): Boolean {
         val file = File(path)
+        val resolved = type ?: mimeType(file.name)
+        // An unknown type matches every app that accepts "*/*" (installer, Settings...); let the user say what it is.
+        if (type == null && resolved == ANY_TYPE) return false
         val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uriFor(context, file), mimeType(file.name))
+            .setDataAndType(uriFor(context, file), resolved)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
         return try {
             context.startActivity(intent)

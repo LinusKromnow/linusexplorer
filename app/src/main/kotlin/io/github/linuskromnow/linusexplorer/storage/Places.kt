@@ -60,5 +60,11 @@ object Places {
         }.distinctBy { it.path }
     }
 
+    /** "Internal shared storage › Documents" rather than "/storage/emulated/0/Documents". */
+    fun describe(path: String, volumes: List<Place>): String {
+        val volume = volumes.filter { VfsPaths.isAncestorOrSelf(it.path, path) }.maxByOrNull { it.path.length } ?: return path
+        return (listOf(volume.label) + VfsPaths.relativeSegments(volume.path, path)).joinToString(" › ")
+    }
+
     private fun kindOf(removable: Boolean) = if (removable) Place.Kind.REMOVABLE else Place.Kind.INTERNAL
 }

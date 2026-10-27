@@ -192,7 +192,7 @@ private fun TrashedRow(item: TrashedItem, volumes: List<Place>, onRestore: () ->
         DateUtils.getRelativeTimeSpanString(item.deletedAt, now, DateUtils.MINUTE_IN_MILLIS).toString()
     }
     val details = listOfNotNull(
-        VfsPaths.parent(item.originalPath)?.let { folderLabel(it, volumes) },
+        VfsPaths.parent(item.originalPath)?.let { Places.describe(it, volumes) },
         deleted,
         Formatter.formatShortFileSize(context, item.size).takeIf { !item.isDirectory },
     ).joinToString(" · ")
@@ -213,12 +213,6 @@ private fun TrashedRow(item: TrashedItem, volumes: List<Place>, onRestore: () ->
             }
         },
     )
-}
-
-/** "Internal shared storage › Documents" rather than "/storage/emulated/0/Documents". */
-private fun folderLabel(path: String, volumes: List<Place>): String {
-    val volume = volumes.filter { VfsPaths.isAncestorOrSelf(it.path, path) }.maxByOrNull { it.path.length } ?: return path
-    return (listOf(volume.label) + VfsPaths.relativeSegments(volume.path, path)).joinToString(" › ")
 }
 
 @Composable
