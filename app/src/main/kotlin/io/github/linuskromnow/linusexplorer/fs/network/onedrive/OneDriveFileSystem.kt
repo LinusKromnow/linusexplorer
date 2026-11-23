@@ -294,7 +294,7 @@ class OneDriveFileSystem(
         val message = error?.optString("message").orEmpty()
         return when {
             code == 401 -> SignedOutFsException("OneDrive")
-            code == 404 || kind == "itemNotFound" -> NotFoundFsException(path)
+            kind == "itemNotFound" || (code == 404 && message.isEmpty()) -> NotFoundFsException(path)
             code == 409 && kind == "nameAlreadyExists" -> AlreadyExistsFsException(conflictPath)
             code == 403 || kind == "accessDenied" -> AccessDeniedFsException(path)
             code == 507 || kind == "quotaLimitReached" -> FsException("Not enough space in your OneDrive")
