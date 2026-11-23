@@ -7,5 +7,5 @@ package io.github.linuskromnow.linusexplorer.cloud
  */
 object CloudKeys {
     /** Dropbox App Console → app → Settings → "App key". */
-    const val DROPBOX_APP_KEY = ""
+    const val DROPBOX_APP_KEY = "63ogn01v7eg456e"
 }
