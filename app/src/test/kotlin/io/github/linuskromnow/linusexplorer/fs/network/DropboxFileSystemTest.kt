@@ -3,8 +3,9 @@ package io.github.linuskromnow.linusexplorer.fs.network
 import io.github.linuskromnow.linusexplorer.fs.AlreadyExistsFsException
 import io.github.linuskromnow.linusexplorer.fs.NotFoundFsException
 import io.github.linuskromnow.linusexplorer.fs.network.dropbox.DropboxFileSystem
-import io.github.linuskromnow.linusexplorer.fs.network.dropbox.DropboxOAuth
-import io.github.linuskromnow.linusexplorer.fs.network.dropbox.SignedOutFsException
+import io.github.linuskromnow.linusexplorer.fs.network.cloud.OAuth
+import io.github.linuskromnow.linusexplorer.fs.network.cloud.SignedOutFsException
+import io.github.linuskromnow.linusexplorer.fs.network.dropbox.Dropbox
 import kotlinx.coroutines.test.runTest
 import mockwebserver3.Dispatcher
 import mockwebserver3.MockResponse
@@ -141,8 +142,8 @@ class DropboxFileSystemTest {
     @Test
     fun pkceChallengeMatchesTheSpec() {
         // RFC 7636, appendix B.
-        assertEquals("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", DropboxOAuth.challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"))
-        val url = DropboxOAuth.authorizeUrl("key", DropboxOAuth.redirectUri("app.id"), "verifier", "state")
+        assertEquals("E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM", OAuth.challenge("dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"))
+        val url = OAuth.authorizeUrl(Dropbox.ENDPOINTS, "key", Dropbox.ENDPOINTS.redirectUri("app.id"), "verifier", "state")
         assertEquals("offline", url.queryParameter("token_access_type"))
         assertEquals("app.id://oauth/dropbox", url.queryParameter("redirect_uri"))
     }

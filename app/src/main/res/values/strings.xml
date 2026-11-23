@@ -274,6 +274,8 @@
     <string name="connection_cloud_body">You sign in on the %1$s website. LinusExplorer never sees your password; it keeps only a revocable access key, encrypted on this device.</string>
     <string name="connection_app_key">App key</string>
     <string name="connection_app_key_help">From your own app in the Dropbox App Console (permission type “Full Dropbox”, scopes files.content.read and files.content.write). Add %1$s as a redirect URI.</string>
+    <string name="connection_client_id">Application (client) ID</string>
+    <string name="connection_client_id_help_onedrive">From your own app registration in the Microsoft Entra admin center (supported accounts: any organization and personal Microsoft accounts; platform “Mobile and desktop applications”; delegated permissions Files.ReadWrite and User.Read). Add %1$s as a redirect URI.</string>
     <string name="connection_sign_in">Sign in with %1$s</string>
     <string name="connection_sign_in_again">Sign in again</string>
     <string name="msg_signed_in">Connected to %1$s</string>

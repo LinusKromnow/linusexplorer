@@ -8,4 +8,7 @@ package io.github.linuskromnow.linusexplorer.cloud
 object CloudKeys {
     /** Dropbox App Console → app → Settings → "App key". */
     const val DROPBOX_APP_KEY = "63ogn01v7eg456e"
+
+    /** Microsoft Entra admin center → App registrations → app → "Application (client) ID". */
+    const val ONEDRIVE_CLIENT_ID = ""
 }

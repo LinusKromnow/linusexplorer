@@ -46,7 +46,9 @@ All through public REST APIs with OkHttp + AppAuth (browser-based OAuth). No ven
 - **S3-compatible**: AWS S3, Backblaze B2, Cloudflare R2, Wasabi, MinIO (SigV4 signing)
 - [x] **Dropbox**: HTTP API v2, browser sign-in with PKCE (no secret), upload sessions for big files, range reads for ZIPs.
       Needs LinusExplorer's own app key in `cloud/CloudKeys.kt`; until then users enter the key of their own Dropbox app
-- **Google Drive**, **OneDrive / SharePoint** (Microsoft Graph), **pCloud**, **Yandex Disk**, **Box**
+- [x] **OneDrive** (personal and work/school) via Microsoft Graph: same features; refresh tokens are rotated and re-saved;
+      uploads over 4 MB are staged in the cache because Graph needs the size up front. Client ID goes in `cloud/CloudKeys.kt`
+- **Google Drive**, **SharePoint sites**, **pCloud**, **Yandex Disk**, **Box**
 - Not feasible: iCloud Drive and Proton Drive (no public API); MEGA needs its native C++ SDK (investigate later)
 
 Alternative worth evaluating: embedding **rclone** (MIT, 70+ providers) as a cloud engine, as Round Sync does.

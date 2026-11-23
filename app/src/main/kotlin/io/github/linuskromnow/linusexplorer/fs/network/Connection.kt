@@ -29,8 +29,11 @@ enum class Protocol(val defaultPort: Int, val label: String) {
     /** S3 over plain HTTP, e.g. a MinIO server on the local network. */
     S3_HTTP(9000, "S3 (HTTP)"),
 
-    /** Dropbox account, signed in through the browser (see dropbox.DropboxOAuth). */
+    /** Dropbox account, signed in through the browser (see cloud.OAuth). */
     DROPBOX(443, "Dropbox"),
+
+    /** OneDrive, personal or work/school, through Microsoft Graph. */
+    ONEDRIVE(443, "OneDrive"),
     ;
 
     /** Whether the server can be used without a user name (FTP "anonymous", SMB guest). */
@@ -41,7 +44,7 @@ enum class Protocol(val defaultPort: Int, val label: String) {
     val isWebDav: Boolean get() = this == WEBDAV || this == WEBDAV_HTTP
     val isS3: Boolean get() = this == S3 || this == S3_HTTP
     /** Signed in through the provider's web page instead of a host name and password. */
-    val isCloud: Boolean get() = this == DROPBOX
+    val isCloud: Boolean get() = this == DROPBOX || this == ONEDRIVE
 }
 
 /**

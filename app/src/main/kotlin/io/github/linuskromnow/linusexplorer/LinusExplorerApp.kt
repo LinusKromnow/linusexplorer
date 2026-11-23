@@ -70,6 +70,7 @@ class AppContainer(context: Context) {
         registry = fileSystems,
         store = ConnectionStore(File(context.filesDir, "connections.bin"), KeystoreSecretBox("linusexplorer_connections")),
         knownHosts = KnownHosts(File(context.filesDir, "known_hosts")),
+        spoolDir = File(context.cacheDir, "upload"),
     ).also { network -> fileSystems.resolver = network::resolve }
     /** For work that must outlive any screen, such as finishing a cloud sign-in. */
     val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

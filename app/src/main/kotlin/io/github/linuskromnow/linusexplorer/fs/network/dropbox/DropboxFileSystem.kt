@@ -10,6 +10,8 @@ import io.github.linuskromnow.linusexplorer.fs.RangeUnsupportedFsException
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
+import io.github.linuskromnow.linusexplorer.fs.network.cloud.OAuthSession
+import io.github.linuskromnow.linusexplorer.fs.network.cloud.SignedOutFsException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.HttpUrl
@@ -32,14 +34,14 @@ import java.util.concurrent.TimeUnit
 /**
  * Dropbox through its HTTP API v2 (no SDK). Paths map one to one; Dropbox itself is
  * case-insensitive. [Connection.password] holds the refresh token, [Connection.share] the app key
- * it was issued for (see [DropboxOAuth]).
+ * it was issued for (see [Dropbox]).
  */
 class DropboxFileSystem(
     private val connection: Connection,
     baseClient: OkHttpClient = OkHttpClient(),
     private val apiBase: HttpUrl = API_BASE,
     private val contentBase: HttpUrl = CONTENT_BASE,
-    private val tokenUrl: HttpUrl = DropboxOAuth.TOKEN_URL,
+    tokenUrl: HttpUrl = Dropbox.ENDPOINTS.tokenUrl,
 ) : VirtualFileSystem, RangeReadable {
     override val id = connection.fsId
     override val displayName = connection.label
@@ -52,8 +54,7 @@ class DropboxFileSystem(
         .writeTimeout(120, TimeUnit.SECONDS)
         .build()
 
-    private var accessToken: String? = null
-    private var expiresAt = 0L
+    private val session = OAuthSession(client, Dropbox.endpoints(tokenUrl), connection.share, connection.password)
 
     override suspend fun list(path: String): List<FileEntry> = io {
         val dir = VfsPaths.normalize(path)
@@ -255,23 +256,14 @@ class DropboxFileSystem(
         }
     }
 
-    @Synchronized
-    private fun token(forceRefresh: Boolean): String {
-        val current = accessToken
-        if (!forceRefresh && current != null && System.currentTimeMillis() < expiresAt - 60_000) return current
-        val refreshToken = connection.password ?: throw SignedOutFsException()
-        val tokens = DropboxOAuth.refresh(client, connection.share, refreshToken, tokenUrl)
-        accessToken = tokens.accessToken
-        expiresAt = tokens.expiresAtMillis
-        return tokens.accessToken
-    }
+    private fun token(forceRefresh: Boolean): String = session.token(forceRefresh)
 
     /** Maps a failed call to the matching [FsException], mostly from Dropbox's `error_summary`. */
     private fun error(code: Int, body: String, path: String, conflictPath: String): FsException {
         val summary = runCatching { JSONObject(body).optString("error_summary") }.getOrNull().orEmpty()
         return when {
             code == 401 && "missing_scope" in summary -> FsException("The Dropbox app key lacks a permission (${summary.trimEnd('.', '/')})")
-            code == 401 -> SignedOutFsException()
+            code == 401 -> SignedOutFsException("Dropbox")
             code == 409 && "not_found" in summary -> NotFoundFsException(path)
             code == 409 && "conflict" in summary -> AlreadyExistsFsException(conflictPath)
             code == 409 && "insufficient_space" in summary -> FsException("Not enough space in your Dropbox")

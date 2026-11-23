@@ -35,8 +35,7 @@ import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import io.github.linuskromnow.linusexplorer.fs.network.Protocol
-import io.github.linuskromnow.linusexplorer.fs.network.dropbox.DropboxOAuth
-import io.github.linuskromnow.linusexplorer.cloud.CloudKeys
+import io.github.linuskromnow.linusexplorer.cloud.CloudProviders
 import io.github.linuskromnow.linusexplorer.fs.network.s3.S3FileSystem
 import io.github.linuskromnow.linusexplorer.ui.browser.CheckboxRow
 import io.github.linuskromnow.linusexplorer.ui.browser.PasswordField
@@ -68,8 +67,10 @@ fun ConnectionDialog(
     var share by rememberSaveable { mutableStateOf(existing?.share.orEmpty()) }
     var region by rememberSaveable { mutableStateOf(existing?.region.orEmpty()) }
     var keyError by rememberSaveable { mutableStateOf(false) }
-    var appKey by rememberSaveable {
-        mutableStateOf(existing?.share?.takeIf { existing.protocol.isCloud } ?: CloudKeys.DROPBOX_APP_KEY)
+    val provider = CloudProviders.of(protocol)
+    // Starts over with the provider's own key whenever another provider is picked.
+    var appKey by rememberSaveable(protocol) {
+        mutableStateOf(if (existing?.protocol == protocol) existing.share else provider?.defaultClientId.orEmpty())
     }
 
     val keyPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -97,7 +98,7 @@ fun ConnectionDialog(
         id = existing?.id ?: java.util.UUID.randomUUID().toString(),
         name = name.trim(),
         protocol = protocol,
-        host = "dropbox.com",
+        host = provider!!.host,
         port = protocol.defaultPort,
         username = if (sameAccount) existing!!.username else "",
         password = if (sameAccount && existing!!.share == appKey) existing.password else null,
@@ -148,10 +149,10 @@ fun ConnectionDialog(
                 if (cloud) {
                     Text(stringResource(R.string.connection_cloud_body, protocol.label), style = MaterialTheme.typography.bodyMedium)
                     // Prefilled with LinusExplorer's own app key when there is one; otherwise users bring their own.
-                    if (CloudKeys.DROPBOX_APP_KEY.isEmpty() || appKey != CloudKeys.DROPBOX_APP_KEY) {
-                        Field(appKey, { appKey = it.trim() }, stringResource(R.string.connection_app_key))
+                    if (provider!!.defaultClientId.isEmpty() || appKey != provider.defaultClientId) {
+                        Field(appKey, { appKey = it.trim() }, stringResource(provider.clientIdLabel))
                         Text(
-                            stringResource(R.string.connection_app_key_help, DropboxOAuth.redirectUri(context.packageName)),
+                            stringResource(provider.clientIdHelp, provider.endpoints.redirectUri(context.packageName)),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

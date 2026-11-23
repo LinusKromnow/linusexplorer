@@ -8,8 +8,7 @@ import androidx.core.net.toUri
 import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import io.github.linuskromnow.linusexplorer.fs.network.NetworkFileSystems
-import io.github.linuskromnow.linusexplorer.fs.network.dropbox.DropboxApi
-import io.github.linuskromnow.linusexplorer.fs.network.dropbox.DropboxOAuth
+import io.github.linuskromnow.linusexplorer.fs.network.cloud.OAuth
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.Channel
@@ -19,7 +18,7 @@ import kotlinx.coroutines.launch
 
 /**
  * Browser-based sign-in for cloud accounts. [start] opens the provider's page; the provider sends
- * the browser to [DropboxOAuth.redirectUri], which [OAuthRedirectActivity] hands to [complete].
+ * the browser to its redirect URI (OAuthEndpoints.redirectUri), which [OAuthRedirectActivity] hands to [complete].
  * The finished connection is saved and reported through [results].
  */
 class CloudSignIn(private val network: NetworkFileSystems, private val scope: CoroutineScope) {
@@ -39,12 +38,16 @@ class CloudSignIn(private val network: NetworkFileSystems, private val scope: Co
     /** Each result is delivered once, to whichever screen collects it first. */
     val results: Flow<Result> = _results.receiveAsFlow()
 
-    /** Opens the sign-in page for [template] (its [Connection.share] is the app key). False if no browser is installed. */
+    /**
+     * Opens the sign-in page for [template], a cloud connection whose [Connection.share] is the
+     * client ID (app key). False if no browser is installed.
+     */
     fun start(context: Context, template: Connection): Boolean {
-        val verifier = DropboxOAuth.newVerifier()
-        val state = DropboxOAuth.newState()
-        val redirectUri = DropboxOAuth.redirectUri(context.packageName)
-        val url = DropboxOAuth.authorizeUrl(template.share, redirectUri, verifier, state)
+        val provider = CloudProviders.of(template.protocol) ?: return false
+        val verifier = OAuth.newVerifier()
+        val state = OAuth.newState()
+        val redirectUri = provider.endpoints.redirectUri(context.packageName)
+        val url = OAuth.authorizeUrl(provider.endpoints, template.share, redirectUri, verifier, state)
         pending = Pending(template, redirectUri, verifier, state)
         return try {
             context.startActivity(Intent(Intent.ACTION_VIEW, url.toString().toUri()).addCategory(Intent.CATEGORY_BROWSABLE))
@@ -72,10 +75,10 @@ class CloudSignIn(private val network: NetworkFileSystems, private val scope: Co
             else -> scope.launch {
                 val result = try {
                     val client = network.httpClient
-                    val appKey = request.template.share
-                    val tokens = DropboxOAuth.exchangeCode(client, appKey, request.redirectUri, code, request.verifier)
-                    val refreshToken = tokens.refreshToken ?: error("Dropbox sent no refresh token")
-                    val email = runCatching { DropboxApi.accountEmail(client, tokens.accessToken) }.getOrDefault("")
+                    val provider = CloudProviders.of(request.template.protocol)!!
+                    val tokens = OAuth.exchangeCode(client, provider.endpoints, request.template.share, request.redirectUri, code, request.verifier)
+                    val refreshToken = tokens.refreshToken ?: error("${provider.endpoints.service} sent no refresh token")
+                    val email = runCatching { provider.accountName(client, tokens.accessToken) }.getOrDefault("")
                     val connection = request.template.copy(password = refreshToken, username = email)
                     network.save(connection)
                     Result.Success(connection)
