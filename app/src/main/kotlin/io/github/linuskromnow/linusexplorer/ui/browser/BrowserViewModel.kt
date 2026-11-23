@@ -1,6 +1,8 @@
 package io.github.linuskromnow.linusexplorer.ui.browser
 
 import android.app.Application
+import android.content.Context
+import io.github.linuskromnow.linusexplorer.cloud.CloudSignIn
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.linuskromnow.linusexplorer.LinusExplorerApp
@@ -702,6 +704,25 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             withContext(Dispatchers.IO) { network.save(connection) }
             if (_state.value.location.fsId == connection.fsId) refresh() // reconnect with the new settings
+        }
+    }
+
+    /** Opens the cloud provider's sign-in page; the result arrives through [collectSignIns]. */
+    fun signIn(context: Context, template: Connection) {
+        _state.update { it.copy(dialog = null) }
+        if (!container.cloudSignIn.start(context, template)) _events.trySend(BrowserEvent.Message(R.string.msg_no_browser))
+    }
+
+    /** Collected by the focused pane only, so a finished sign-in opens in exactly one place. */
+    suspend fun collectSignIns() {
+        container.cloudSignIn.results.collect { result ->
+            when (result) {
+                is CloudSignIn.Result.Success -> {
+                    if (_state.value.location.fsId == result.connection.fsId) refresh() else openConnection(result.connection)
+                    _events.trySend(BrowserEvent.Message(R.string.msg_signed_in, listOf(result.connection.label)))
+                }
+                is CloudSignIn.Result.Failure -> _events.trySend(BrowserEvent.Message(result.resId, result.args))
+            }
         }
     }
 

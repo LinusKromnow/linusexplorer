@@ -5,6 +5,7 @@ import android.content.Context
 import coil3.ImageLoader
 import coil3.request.crossfade
 import coil3.video.VideoFrameDecoder
+import io.github.linuskromnow.linusexplorer.cloud.CloudSignIn
 import io.github.linuskromnow.linusexplorer.data.SavedFolders
 import io.github.linuskromnow.linusexplorer.fs.trash.RecycleBin
 import io.github.linuskromnow.linusexplorer.storage.Places
@@ -70,6 +71,9 @@ class AppContainer(context: Context) {
         store = ConnectionStore(File(context.filesDir, "connections.bin"), KeystoreSecretBox("linusexplorer_connections")),
         knownHosts = KnownHosts(File(context.filesDir, "known_hosts")),
     ).also { network -> fileSystems.resolver = network::resolve }
+    /** For work that must outlive any screen, such as finishing a cloud sign-in. */
+    val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    val cloudSignIn = CloudSignIn(network, appScope)
     val fileTransfer = FileTransfer(fileSystems)
     val preferences = UserPreferences(context)
     val savedFolders = SavedFolders(File(context.filesDir, "saved_folders.bin"))

@@ -139,4 +139,5 @@ dependencies {
     testImplementation(libs.mina.sshd.sftp)
     testImplementation(libs.ftpserver.core) // in-process FTP/FTPS server for network tests
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.org.json) // Android ships org.json; plain JVM unit tests only see stubs
 }

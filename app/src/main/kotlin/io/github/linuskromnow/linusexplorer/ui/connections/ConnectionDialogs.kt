@@ -32,6 +32,8 @@ import io.github.linuskromnow.linusexplorer.R
 import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 import io.github.linuskromnow.linusexplorer.fs.network.Connection
 import io.github.linuskromnow.linusexplorer.fs.network.Protocol
+import io.github.linuskromnow.linusexplorer.fs.network.dropbox.DropboxOAuth
+import io.github.linuskromnow.linusexplorer.cloud.CloudKeys
 import io.github.linuskromnow.linusexplorer.fs.network.s3.S3FileSystem
 import io.github.linuskromnow.linusexplorer.ui.browser.CheckboxRow
 import io.github.linuskromnow.linusexplorer.ui.browser.PasswordField
@@ -43,6 +45,8 @@ private const val MAX_KEY_FILE_BYTES = 64 * 1024
 fun ConnectionDialog(
     existing: Connection?,
     onSave: (Connection) -> Unit,
+    /** Cloud accounts: open the provider's sign-in page for this (not yet saved) connection. */
+    onSignIn: (Connection) -> Unit,
     onDelete: (Connection) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -61,6 +65,9 @@ fun ConnectionDialog(
     var share by rememberSaveable { mutableStateOf(existing?.share.orEmpty()) }
     var region by rememberSaveable { mutableStateOf(existing?.region.orEmpty()) }
     var keyError by rememberSaveable { mutableStateOf(false) }
+    var appKey by rememberSaveable {
+        mutableStateOf(existing?.share?.takeIf { existing.protocol.isCloud } ?: CloudKeys.DROPBOX_APP_KEY)
+    }
 
     val keyPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -71,9 +78,29 @@ fun ConnectionDialog(
 
     val portNumber = port.toIntOrNull()?.takeIf { it in 1..65535 }
     val keyAuth = useKey && protocol.supportsKeys
-    val valid = host.isNotBlank() && portNumber != null &&
-        (username.isNotBlank() || protocol.allowsAnonymous) && (!keyAuth || privateKey != null) &&
-        (!protocol.needsShare || share.isNotBlank())
+    val cloud = protocol.isCloud
+    val valid = if (cloud) {
+        appKey.isNotBlank()
+    } else {
+        host.isNotBlank() && portNumber != null &&
+            (username.isNotBlank() || protocol.allowsAnonymous) && (!keyAuth || privateKey != null) &&
+            (!protocol.needsShare || share.isNotBlank())
+    }
+    // A new cloud account, one without a stored sign-in or with a different app key must sign in first.
+    val needsSignIn = cloud && (existing == null || existing.protocol != protocol || existing.password == null || existing.share != appKey)
+
+    val sameAccount = existing != null && existing.protocol == protocol
+    fun cloudConnection() = Connection(
+        id = existing?.id ?: java.util.UUID.randomUUID().toString(),
+        name = name.trim(),
+        protocol = protocol,
+        host = "dropbox.com",
+        port = protocol.defaultPort,
+        username = if (sameAccount) existing!!.username else "",
+        password = if (sameAccount && existing!!.share == appKey) existing.password else null,
+        path = VfsPaths.normalize(path.ifBlank { VfsPaths.ROOT }),
+        share = appKey,
+    )
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -99,6 +126,28 @@ fun ConnectionDialog(
                     }
                 }
                 Field(name, { name = it }, stringResource(R.string.connection_name_optional))
+                if (cloud) {
+                    Text(stringResource(R.string.connection_cloud_body, protocol.label), style = MaterialTheme.typography.bodyMedium)
+                    // Prefilled with LinusExplorer's own app key when there is one; otherwise users bring their own.
+                    if (CloudKeys.DROPBOX_APP_KEY.isEmpty() || appKey != CloudKeys.DROPBOX_APP_KEY) {
+                        Field(appKey, { appKey = it.trim() }, stringResource(R.string.connection_app_key))
+                        Text(
+                            stringResource(R.string.connection_app_key_help, DropboxOAuth.redirectUri(context.packageName)),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Field(path, { path = it.trim() }, stringResource(R.string.connection_path))
+                    if (existing != null && !needsSignIn) {
+                        TextButton(onClick = { onSignIn(cloudConnection()) }) { Text(stringResource(R.string.connection_sign_in_again)) }
+                    }
+                    if (existing != null) {
+                        TextButton(onClick = { onDelete(existing) }) {
+                            Text(stringResource(R.string.connection_delete), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                    return@Column
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Field(host, { host = it.trim() }, stringResource(R.string.connection_host), Modifier.weight(2f), KeyboardType.Uri)
                     Field(port, { port = it.filter(Char::isDigit) }, stringResource(R.string.connection_port), Modifier.weight(1f), KeyboardType.Number)
@@ -148,6 +197,13 @@ fun ConnectionDialog(
             }
         },
         confirmButton = {
+            if (cloud) {
+                TextButton(
+                    enabled = valid,
+                    onClick = { if (needsSignIn) onSignIn(cloudConnection()) else onSave(cloudConnection()) },
+                ) { Text(stringResource(if (needsSignIn) R.string.connection_sign_in else R.string.action_save, protocol.label)) }
+                return@AlertDialog
+            }
             TextButton(
                 enabled = valid,
                 onClick = {

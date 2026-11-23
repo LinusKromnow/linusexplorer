@@ -45,6 +45,24 @@
             </intent-filter>
         </activity>
 
+        <!-- The browser returns here after a cloud sign-in (Dropbox, ...); see cloud/CloudSignIn. -->
+        <activity
+            android:name=".cloud.OAuthRedirectActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="oauth"
+                    android:scheme="${applicationId}" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".tasks.TransferService"
             android:exported="false"

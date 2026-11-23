@@ -51,6 +51,7 @@ import io.github.linuskromnow.linusexplorer.fs.VfsPaths
 
 @Composable
 fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
+    val context = LocalContext.current
     when (dialog) {
         BrowserDialog.NewFolder -> NameDialog(
             title = stringResource(R.string.action_new_folder),
@@ -162,6 +163,7 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
         is BrowserDialog.EditConnection -> ConnectionDialog(
             existing = dialog.connection,
             onSave = viewModel::saveConnection,
+            onSignIn = { viewModel.signIn(context, it) },
             onDelete = viewModel::deleteConnection,
             onDismiss = viewModel::dismissDialog,
         )

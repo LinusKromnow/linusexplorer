@@ -147,6 +147,9 @@ fun BrowserScreen(
         }
     }
 
+    LaunchedEffect(viewModel, isFocused) {
+        if (isFocused) viewModel.collectSignIns()
+    }
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {

@@ -268,6 +268,16 @@
     <string name="connection_add">Add connection</string>
     <string name="connection_edit">Edit connection</string>
     <string name="connection_delete">Delete connection</string>
+    <string name="connection_cloud_body">You sign in on the %1$s website. LinusExplorer never sees your password; it keeps only a revocable access key, encrypted on this device.</string>
+    <string name="connection_app_key">App key</string>
+    <string name="connection_app_key_help">From your own app in the Dropbox App Console (permission type “Full Dropbox”, scopes files.content.read and files.content.write). Add %1$s as a redirect URI.</string>
+    <string name="connection_sign_in">Sign in with %1$s</string>
+    <string name="connection_sign_in_again">Sign in again</string>
+    <string name="msg_signed_in">Connected to %1$s</string>
+    <string name="msg_sign_in_cancelled">Sign-in cancelled</string>
+    <string name="msg_sign_in_interrupted">Sign-in was interrupted. Please try again.</string>
+    <string name="msg_sign_in_failed">Sign-in failed: %1$s</string>
+    <string name="msg_no_browser">No web browser is installed to sign in with</string>
     <string name="connection_name_optional">Name (optional)</string>
     <string name="connection_host">Server</string>
     <string name="connection_port">Port</string>

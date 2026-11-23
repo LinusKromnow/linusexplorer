@@ -28,18 +28,27 @@ enum class Protocol(val defaultPort: Int, val label: String) {
 
     /** S3 over plain HTTP, e.g. a MinIO server on the local network. */
     S3_HTTP(9000, "S3 (HTTP)"),
+
+    /** Dropbox account, signed in through the browser (see dropbox.DropboxOAuth). */
+    DROPBOX(443, "Dropbox"),
     ;
 
     /** Whether the server can be used without a user name (FTP "anonymous", SMB guest). */
-    val allowsAnonymous: Boolean get() = this != SFTP && !isS3
+    val allowsAnonymous: Boolean get() = this != SFTP && !isS3 && !isCloud
     val supportsKeys: Boolean get() = this == SFTP
     /** SMB share or S3 bucket. */
     val needsShare: Boolean get() = this == SMB || isS3
     val isWebDav: Boolean get() = this == WEBDAV || this == WEBDAV_HTTP
     val isS3: Boolean get() = this == S3 || this == S3_HTTP
+    /** Signed in through the provider's web page instead of a host name and password. */
+    val isCloud: Boolean get() = this == DROPBOX
 }
 
-/** A saved remote storage. Secrets live here too; the whole list is stored encrypted (see [ConnectionStore]). */
+/**
+ * A saved remote storage. Secrets live here too; the whole list is stored encrypted (see [ConnectionStore]).
+ * Cloud accounts reuse the fields: [password] is the OAuth refresh token, [share] the app key it
+ * belongs to, [username] the account's e-mail address.
+ */
 data class Connection(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
@@ -62,7 +71,13 @@ data class Connection(
     /** The [io.github.linuskromnow.linusexplorer.fs.VirtualFileSystem] id this connection is registered under. */
     val fsId: String get() = fsIdFor(id)
 
-    val label: String get() = name.ifBlank { if (username.isBlank()) host else "$username@$host" }
+    val label: String get() = name.ifBlank {
+        when {
+            protocol.isCloud -> if (username.isBlank()) protocol.label else "${protocol.label} ($username)"
+            username.isBlank() -> host
+            else -> "$username@$host"
+        }
+    }
 
     companion object {
         private const val PREFIX = "net:"
