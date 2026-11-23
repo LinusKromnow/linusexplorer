@@ -1115,7 +1115,8 @@ class BrowserViewModel(application: Application) : AndroidViewModel(application)
         val state = _state.value
         val entries = state.selectedEntries
         if (entries.isEmpty() || state.readOnly) return
-        showDialog(BrowserDialog.ConfirmDelete(entries, toBin = entries.all { usesRecycleBin(it.path) }))
+        val serverTrash = fileSystems.find(state.location.fsId)?.serverTrash
+        showDialog(BrowserDialog.ConfirmDelete(entries, toBin = entries.all { usesRecycleBin(it.path) }, serverTrash = serverTrash))
     }
 
     private fun usesRecycleBin(path: String): Boolean {

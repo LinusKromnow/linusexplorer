@@ -44,6 +44,7 @@ class DropboxFileSystem(
     override val id = connection.fsId
     override val displayName = connection.label
     override val rootPath = VfsPaths.ROOT
+    override val serverTrash = "Dropbox"
 
     private val client = baseClient.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)

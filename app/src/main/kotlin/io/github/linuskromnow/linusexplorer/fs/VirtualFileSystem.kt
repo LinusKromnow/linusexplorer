@@ -18,6 +18,9 @@ interface VirtualFileSystem {
     /** Read-only file systems (e.g. opened archives) reject every write operation. */
     val isReadOnly: Boolean get() = false
 
+    /** Name of the service whose own trash keeps files deleted here (e.g. "Dropbox"); null if deleting is final. */
+    val serverTrash: String? get() = null
+
     suspend fun list(path: String): List<FileEntry>
     suspend fun stat(path: String): FileEntry
     suspend fun exists(path: String): Boolean

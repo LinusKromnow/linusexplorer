@@ -75,7 +75,8 @@ sealed interface BrowserDialog {
     data object NewFile : BrowserDialog
     data class Rename(val entry: FileEntry) : BrowserDialog
     /** [toBin]: the entries go to the recycle bin instead of being deleted for good. */
-    data class ConfirmDelete(val entries: List<FileEntry>, val toBin: Boolean) : BrowserDialog
+    /** [serverTrash]: the service that keeps a deleted copy, if any (see VirtualFileSystem.serverTrash). */
+    data class ConfirmDelete(val entries: List<FileEntry>, val toBin: Boolean, val serverTrash: String? = null) : BrowserDialog
     data class Compress(val entries: List<FileEntry>, val suggestedName: String) : BrowserDialog
     data class Password(val fsId: String, val name: String, val wrongPassword: Boolean) : BrowserDialog
     data class Encrypt(val entries: List<FileEntry>) : BrowserDialog

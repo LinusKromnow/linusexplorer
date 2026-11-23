@@ -15,6 +15,9 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -110,11 +113,27 @@ fun ConnectionDialog(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.verticalScroll(rememberScrollState()),
             ) {
+                // Servers and cloud accounts are set up differently, so they are two groups.
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    listOf(false, true).forEachIndexed { index, cloudGroup ->
+                        SegmentedButton(
+                            selected = protocol.isCloud == cloudGroup,
+                            onClick = {
+                                if (protocol.isCloud != cloudGroup) {
+                                    val option = Protocol.entries.first { it.isCloud == cloudGroup }
+                                    if (port == protocol.defaultPort.toString()) port = option.defaultPort.toString()
+                                    protocol = option
+                                }
+                            },
+                            shape = SegmentedButtonDefaults.itemShape(index, 2),
+                        ) { Text(stringResource(if (cloudGroup) R.string.connection_group_cloud else R.string.connection_group_server)) }
+                    }
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                 ) {
-                    Protocol.entries.forEach { option ->
+                    Protocol.entries.filter { it.isCloud == protocol.isCloud }.forEach { option ->
                         FilterChip(
                             selected = protocol == option,
                             onClick = {

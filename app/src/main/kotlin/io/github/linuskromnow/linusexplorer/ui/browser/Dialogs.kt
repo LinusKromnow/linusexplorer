@@ -88,6 +88,8 @@ fun BrowserDialogHost(dialog: BrowserDialog, viewModel: BrowserViewModel) {
                     Text(
                         if (dialog.toBin) {
                             pluralStringResource(R.plurals.delete_to_bin_body, RecycleBin.RETENTION_DAYS, RecycleBin.RETENTION_DAYS)
+                        } else if (dialog.serverTrash != null) {
+                            stringResource(R.string.delete_server_trash, dialog.serverTrash)
                         } else {
                             stringResource(R.string.delete_warning)
                         },

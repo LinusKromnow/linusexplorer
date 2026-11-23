@@ -138,6 +138,7 @@
         <item quantity="other">Delete %d items?</item>
     </plurals>
     <string name="delete_warning">This can’t be undone.</string>
+    <string name="delete_server_trash">%1$s keeps deleted files for a while; you can restore them on its website.</string>
     <plurals name="delete_to_bin_body">
         <item quantity="one">It goes to the recycle bin, where you can restore it for %d day.</item>
         <item quantity="other">It goes to the recycle bin, where you can restore it for %d days.</item>
@@ -268,6 +269,8 @@
     <string name="connection_add">Add connection</string>
     <string name="connection_edit">Edit connection</string>
     <string name="connection_delete">Delete connection</string>
+    <string name="connection_group_server">Server</string>
+    <string name="connection_group_cloud">Cloud</string>
     <string name="connection_cloud_body">You sign in on the %1$s website. LinusExplorer never sees your password; it keeps only a revocable access key, encrypted on this device.</string>
     <string name="connection_app_key">App key</string>
     <string name="connection_app_key_help">From your own app in the Dropbox App Console (permission type “Full Dropbox”, scopes files.content.read and files.content.write). Add %1$s as a redirect URI.</string>
