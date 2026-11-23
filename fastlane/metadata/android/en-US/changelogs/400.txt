@@ -1,0 +1,4 @@
+• Dropbox and OneDrive connections: sign in on the provider's website, then browse, copy, upload, download, rename and delete as with any other storage
+• ZIP files in the cloud open without downloading them first
+• The connection dialog separates servers from cloud accounts
+• Deleting cloud files mentions that the provider keeps them in its recycle bin for a while

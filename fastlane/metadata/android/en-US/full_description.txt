@@ -17,6 +17,7 @@ LinusExplorer is a free and open-source file manager. No ads, no tracking, no pa
 <b>Network storage</b>
 <ul>
 <li>SFTP, FTP and FTPS, SMB 2/3 (Windows shares, Samba, NAS), WebDAV (Nextcloud, ownCloud) and S3-compatible storage (AWS, Backblaze B2, Cloudflare R2, Wasabi, MinIO)</li>
+<li>Dropbox and OneDrive: sign in on the provider's website; the app never sees your password</li>
 <li>Saved connections are stored encrypted on the device</li>
 <li>Edit a remote file in any app and upload the changes back</li>
 </ul>

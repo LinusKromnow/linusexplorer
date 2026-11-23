@@ -35,8 +35,8 @@ android {
         applicationId = "io.github.linuskromnow.linusexplorer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 303 // major * 10000 + minor * 100 + patch
-        versionName = "0.3.3"
+        versionCode = 400 // major * 10000 + minor * 100 + patch
+        versionName = "0.4.0"
     }
 
     signingConfigs {

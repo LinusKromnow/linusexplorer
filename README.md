@@ -1,7 +1,7 @@
 # LinusExplorer
 
 A free, open-source Android file manager in the spirit of Amaze and Solid Explorer, with no ads, tracking or paid tiers.
-It covers local storage (list and grid views, recursive search, bookmarks and recent folders, tabs and dual-pane, a recycle bin, optional root access, file properties with checksums, archives, file encryption, an encrypted vault and a built-in text editor) and network storage over SFTP, FTP/FTPS, SMB, WebDAV and S3, including uploading files edited in other apps. Cloud drives (Google Drive, Dropbox, OneDrive...) are next. See [ROADMAP.md](ROADMAP.md).
+It covers local storage (list and grid views, recursive search, bookmarks and recent folders, tabs and dual-pane, a recycle bin, optional root access, file properties with checksums, archives, file encryption, an encrypted vault and a built-in text editor) and network storage over SFTP, FTP/FTPS, SMB, WebDAV and S3, plus Dropbox and OneDrive, including uploading files edited in other apps. More cloud drives (Google Drive...) are next. See [ROADMAP.md](ROADMAP.md).
 
 ## Building
 
@@ -35,7 +35,7 @@ app/src/main/kotlin/io/github/linuskromnow/linusexplorer/
 ├── fs/            Storage-agnostic core: VirtualFileSystem, paths, sorting, copy/move engine
 │   ├── local/     Device storage backend
 │   ├── root/      Superuser backend (libsu root service), optional
-│   ├── network/   SFTP, FTP/FTPS, SMB, WebDAV and S3 backends, saved connections
+│   ├── network/   SFTP, FTP/FTPS, SMB, WebDAV, S3, Dropbox and OneDrive backends, saved connections
 │   ├── archive/   Browsing and creating ZIP, 7z and tar archives
 │   ├── vault/     The encrypted private vault
 │   ├── trash/     Per-volume recycle bin
